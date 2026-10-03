@@ -1,0 +1,14 @@
+# Safety net for the whole repo (each project also has its own .gitignore)
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+*.log
+
+.DS_Store
+Thumbs.db
+.idea/

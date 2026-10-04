@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import type { QueryFilter } from 'mongoose';
 import { AppException } from '../../common/exceptions/app.exception.js';
 import { escapeRegex, sortDirection } from '../../common/utils/query.util.js';
+import { isAdmin } from '../../common/utils/tenant-scope.util.js';
+import type { AuthUser } from '../auth/types/auth.type.js';
 import { PermissionsRepository } from '../permissions/permissions.repository.js';
 import { ROLE_ERRORS } from './constants/roles.constants.js';
 import type { CreateRoleDto } from './dto/create-role.dto.js';
@@ -17,6 +19,9 @@ const PERMISSIONS_POPULATE = {
   select: 'name key parent isActive',
 };
 
+/** Hidden roles (the super admin) are excluded from every read here, for every caller. */
+const VISIBLE: QueryFilter<Role> = { isHidden: { $ne: true } };
+
 @Injectable()
 export class RolesService {
   constructor(
@@ -24,26 +29,20 @@ export class RolesService {
     private readonly permissionsRepository: PermissionsRepository,
   ) {}
 
-  async create(dto: CreateRoleDto): Promise<RoleDocument> {
+  async create(actor: AuthUser, dto: CreateRoleDto): Promise<RoleDocument> {
+    this.assertSuperAdmin(actor);
     await this.assertNameAvailable(dto.name);
-    const permissions = await this.resolvePermissionIds(
-      dto.permissionIds ?? [],
-    );
 
     const role = await this.repository.create({
       name: dto.name,
       description: dto.description ?? '',
-      permissions,
       isActive: dto.isActive ?? true,
-      isDefault: dto.isDefault ?? false,
     });
-    if (role.isDefault) await this.repository.clearDefault(role._id);
-
     return this.findById(String(role._id));
   }
 
   findAll(query: ListRolesQueryDto) {
-    const filter: QueryFilter<Role> = {};
+    const filter: QueryFilter<Role> = { ...VISIBLE };
     if (query.search) {
       filter.name = new RegExp(escapeRegex(query.search), 'i');
     }
@@ -60,53 +59,45 @@ export class RolesService {
   /** Lightweight list for dropdowns (e.g. the user form). */
   async findOptions(): Promise<RoleOption[]> {
     const roles = await this.repository
-      .find({ isActive: true })
+      .find({ ...VISIBLE, isActive: true })
       .sort({ name: 1 })
-      .select('name')
+      .select('name isAdmin')
       .exec();
-    return roles.map((role) => ({ id: String(role._id), name: role.name }));
+    return roles.map((role) => ({
+      id: String(role._id),
+      name: role.name,
+      isAdmin: role.isAdmin,
+    }));
   }
 
   async findById(id: string): Promise<RoleDocument> {
-    const role = await this.repository.findById(id, PERMISSIONS_POPULATE);
+    const role = await this.repository.findVisibleById(id, PERMISSIONS_POPULATE);
     if (!role) throw new AppException(ROLE_ERRORS.NOT_FOUND);
     return role;
   }
 
-  async update(id: string, dto: UpdateRoleDto): Promise<RoleDocument> {
+  async update(
+    actor: AuthUser,
+    id: string,
+    dto: UpdateRoleDto,
+  ): Promise<RoleDocument> {
+    this.assertSuperAdmin(actor);
     const existing = await this.findById(id);
 
-    if (existing.isSystem) {
-      const renamed = dto.name !== undefined && dto.name !== existing.name;
-      if (renamed || dto.isActive === false) {
-        throw new AppException(ROLE_ERRORS.SYSTEM_PROTECTED);
-      }
-    }
-    if (dto.name && dto.name.toLowerCase() !== existing.name.toLowerCase()) {
-      await this.assertNameAvailable(dto.name);
-    }
-    if (dto.isDefault === false && existing.isDefault && existing.isSystem) {
-      // There must always be a role to give new sign-ups.
+    const renamed = dto.name !== undefined && dto.name !== existing.name;
+    if (existing.isSystem && (renamed || dto.isActive === false)) {
       throw new AppException(ROLE_ERRORS.SYSTEM_PROTECTED);
     }
-
-    const { permissionIds, ...fields } = dto;
-    const changes: Record<string, unknown> = { ...fields };
-    if (permissionIds !== undefined) {
-      // Super Admin's access is implicit; its permission set is not editable.
-      if (existing.isSuperAdmin) {
-        throw new AppException(ROLE_ERRORS.SYSTEM_PROTECTED);
-      }
-      changes.permissions = await this.resolvePermissionIds(permissionIds);
+    if (renamed && dto.name!.toLowerCase() !== existing.name.toLowerCase()) {
+      await this.assertNameAvailable(dto.name!);
     }
 
     const updated = await this.repository.updateById(
       id,
-      { $set: changes },
+      { $set: dto },
       PERMISSIONS_POPULATE,
     );
     if (!updated) throw new AppException(ROLE_ERRORS.NOT_FOUND);
-    if (dto.isDefault) await this.repository.clearDefault(id);
     return updated;
   }
 
@@ -114,9 +105,11 @@ export class RolesService {
     id: string,
     dto: UpdateRolePermissionsDto,
   ): Promise<RoleDocument> {
-    await this.findById(id);
-    const permissions = await this.resolvePermissionIds(dto.permissionIds);
+    const role = await this.findById(id);
+    // Admin's access is implicit; its permission set is not editable.
+    if (role.isAdmin) throw new AppException(ROLE_ERRORS.SYSTEM_PROTECTED);
 
+    const permissions = await this.resolvePermissionIds(dto.permissionIds);
     const updated = await this.repository.updateById(
       id,
       { $set: { permissions } },
@@ -126,12 +119,19 @@ export class RolesService {
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findById(id);
+  async remove(actor: AuthUser, id: string): Promise<void> {
+    this.assertSuperAdmin(actor);
+    const role = await this.findById(id);
+    if (role.isSystem) throw new AppException(ROLE_ERRORS.SYSTEM_PROTECTED);
     if (await this.repository.hasUsers(id)) {
       throw new AppException(ROLE_ERRORS.IN_USE);
     }
     await this.repository.deleteById(id);
+  }
+
+  /** Creating, renaming and deleting roles is reserved for the super admin, whatever permissions another role is given. */
+  private assertSuperAdmin(actor: AuthUser): void {
+    if (!isAdmin(actor)) throw new AppException(ROLE_ERRORS.SUPER_ADMIN_ONLY);
   }
 
   private async assertNameAvailable(name: string): Promise<void> {

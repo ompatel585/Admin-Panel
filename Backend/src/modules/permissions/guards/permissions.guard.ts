@@ -32,7 +32,7 @@ export class PermissionsGuard implements CanActivate {
 
     const { user } = context.switchToHttp().getRequest<AuthenticatedRequest>();
     if (!user) throw new AppException(COMMON_ERRORS.UNAUTHORIZED);
-    if (user.role?.isSuperAdmin) return true;
+    if (user.role?.isAdmin) return true;
 
     const held = new Set(user.permissions);
     const allowed =

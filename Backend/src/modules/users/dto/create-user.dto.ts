@@ -32,6 +32,11 @@ export class CreateUserDto {
   @IsMongoId()
   roleId: string;
 
+  /** Admins choose the workspace for a User; everyone else adds to their own. */
+  @IsOptional()
+  @IsMongoId()
+  tenantId?: string;
+
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

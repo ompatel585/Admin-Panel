@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend
 
-## Getting Started
+Next.js 16 (App Router), Tailwind v4, shadcn/ui (Base UI), Redux Toolkit Query, Formik + Yup.
+See the [root README](../README.md) for what the product does.
 
-First, run the development server:
+Next.js 16 has breaking changes from earlier versions; read the guides in
+`node_modules/next/dist/docs/` before changing framework-level code.
+
+## Environment
+
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_API_URL` | Backend base URL, e.g. `http://localhost:5000/api` |
+
+## Structure
+
+```
+src/app/          routes (thin: each page renders a view)
+src/views/        one screen each
+src/sections/     dialogs and parts that belong to one feature
+src/components/   ui/ (shadcn), shared/, form/ (Formik fields), layout/, guards/
+src/services/api/ RTK Query endpoints, one file per backend module
+src/constants/    navigation, permission keys, routes, user-facing messages
+src/types/        API shapes
+```
+
+Nothing is hard-coded per user. The sidebar and every action are shown or hidden from the
+permission keys the API returns for the signed-in user (`usePermissions`, `<Can>`,
+`<RequirePermission>`). Admins additionally get workspace filters and pickers.
+
+API errors and success toasts are produced in one place, `store/middleware/feedback.middleware.ts`,
+from the message tables in `constants/messages/`. Components never format feedback themselves.
+
+## Scripts
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run typecheck
+npm run lint
+npm run build
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

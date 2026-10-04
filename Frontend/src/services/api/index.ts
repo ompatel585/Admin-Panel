@@ -3,4 +3,8 @@ export * from "./authApi";
 export * from "./usersApi";
 export * from "./rolesApi";
 export * from "./permissionsApi";
+export * from "./tenantsApi";
+export * from "./sitesApi";
+export * from "./crawlJobsApi";
+export * from "./dashboardApi";
 export { healthApi, useGetHealthQuery } from "./healthApi";

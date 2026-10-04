@@ -12,7 +12,20 @@ import { env } from "@/config/env";
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({ baseUrl: env.apiUrl, credentials: "include" }),
-  tagTypes: ["Me", "User", "Role", "RoleOption", "Permission", "PermissionTree"],
+  tagTypes: [
+    "Me",
+    "User",
+    "Role",
+    "RoleOption",
+    "Permission",
+    "PermissionTree",
+    "Tenant",
+    "TenantOption",
+    "Site",
+    "SiteOption",
+    "CrawlJob",
+    "Dashboard",
+  ],
   endpoints: () => ({}),
 });
 

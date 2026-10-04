@@ -27,6 +27,27 @@ export class PermissionsRepository extends BaseRepository<Permission> {
     return this.find({ _id: { $in: ids } });
   }
 
+  /**
+   * Deletes the given modules and their sub-permissions and revokes them from
+   * every role. Returns how many permissions were removed.
+   */
+  async retireModules(moduleKeys: string[]): Promise<number> {
+    const doomed = await this.find({
+      $or: [
+        { key: { $in: moduleKeys } },
+        ...moduleKeys.map((key) => ({ key: new RegExp(`^${key}[.]`) })),
+      ],
+    })
+      .select('_id')
+      .exec();
+    if (doomed.length === 0) return 0;
+
+    const ids = doomed.map((permission) => permission._id);
+    await this.roleModel.updateMany({}, { $pull: { permissions: { $in: ids } } });
+    await this.model.deleteMany({ _id: { $in: ids } });
+    return ids.length;
+  }
+
   countChildren(parentId: string | Types.ObjectId): Promise<number> {
     return this.count({ parent: parentId });
   }

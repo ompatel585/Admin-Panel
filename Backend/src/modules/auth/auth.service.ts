@@ -9,6 +9,12 @@ import {
 } from '../../common/utils/password.util.js';
 import type { AppConfig } from '../../config/configuration.js';
 import { MailService } from '../mail/mail.service.js';
+import type {
+  TenantPlan,
+  TenantStatus,
+} from '../tenants/constants/tenants.constants.js';
+import { TenantsService } from '../tenants/tenants.service.js';
+import { HIDDEN_ROLE_LABEL } from '../roles/constants/roles.constants.js';
 import { RolesRepository } from '../roles/roles.repository.js';
 import type { UserDocument } from '../users/schemas/user.schema.js';
 import { UsersRepository } from '../users/users.repository.js';
@@ -29,13 +35,17 @@ export class AuthService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly rolesRepository: RolesRepository,
+    private readonly tenantsService: TenantsService,
     private readonly resetTokens: PasswordResetTokenRepository,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly config: ConfigService<AppConfig, true>,
   ) {}
 
-  /** The very first account becomes Super Admin; everyone after gets the default role. */
+  /**
+   * The very first account becomes the platform Admin (no workspace); everyone
+   * after gets the default User role and a fresh workspace of their own.
+   */
   async signup(dto: SignupDto) {
     if (await this.usersRepository.exists({ email: dto.email })) {
       throw new AppException(AUTH_ERRORS.EMAIL_TAKEN);
@@ -43,15 +53,20 @@ export class AuthService {
 
     const isFirstUser = (await this.usersRepository.count()) === 0;
     const role = isFirstUser
-      ? await this.rolesRepository.findSuperAdmin()
+      ? await this.rolesRepository.findAdmin()
       : await this.rolesRepository.findDefault();
     if (!role) throw new AppException(AUTH_ERRORS.DEFAULT_ROLE_MISSING);
+
+    const tenant = isFirstUser
+      ? null
+      : await this.tenantsService.create({ name: `${dto.name} workspace` });
 
     const user = await this.usersRepository.create({
       name: dto.name,
       email: dto.email,
       passwordHash: await hashPassword(dto.password),
       role: role._id,
+      tenant: tenant?._id ?? null,
     });
 
     return this.startSession(user);
@@ -65,6 +80,7 @@ export class AuthService {
       throw new AppException(AUTH_ERRORS.INVALID_CREDENTIALS);
     }
     if (!user.isActive) throw new AppException(AUTH_ERRORS.ACCOUNT_DISABLED);
+    await this.assertWorkspaceActive(user.tenant);
 
     await this.usersRepository.touchLastLogin(user._id);
     return this.startSession(user);
@@ -132,13 +148,27 @@ export class AuthService {
     const user = await this.usersRepository.findAuthContext(payload.sub);
     if (!user) throw new AppException(AUTH_ERRORS.SESSION_INVALID);
     if (!user.isActive) throw new AppException(AUTH_ERRORS.ACCOUNT_DISABLED);
-    return this.toAuthUser(user);
+    const authUser = this.toAuthUser(user);
+    if (authUser.tenant?.status === 'suspended') {
+      throw new AppException(AUTH_ERRORS.WORKSPACE_SUSPENDED);
+    }
+    return authUser;
   }
 
   async getProfile(userId: string): Promise<AuthUser> {
     const user = await this.usersRepository.findAuthContext(userId);
     if (!user) throw new AppException(AUTH_ERRORS.SESSION_INVALID);
     return this.toAuthUser(user);
+  }
+
+  private async assertWorkspaceActive(
+    tenantId: UserDocument['tenant'],
+  ): Promise<void> {
+    if (!tenantId) return;
+    const tenant = await this.tenantsService.getOrFail(String(tenantId));
+    if (tenant.status === 'suspended') {
+      throw new AppException(AUTH_ERRORS.WORKSPACE_SUSPENDED);
+    }
   }
 
   private async startSession(user: UserDocument) {
@@ -152,9 +182,17 @@ export class AuthService {
     const role = user.role as unknown as {
       _id: unknown;
       name: string;
-      isSuperAdmin: boolean;
+      isAdmin: boolean;
+      isHidden?: boolean;
       isActive: boolean;
       permissions: { key: string }[];
+    } | null;
+    const tenant = user.tenant as unknown as {
+      _id: unknown;
+      name: string;
+      slug: string;
+      plan: TenantPlan;
+      status: TenantStatus;
     } | null;
 
     // A deactivated role grants nothing.
@@ -167,13 +205,30 @@ export class AuthService {
       role: role
         ? {
             id: String(role._id),
-            name: role.name,
-            isSuperAdmin: Boolean(effective?.isSuperAdmin),
+            name: role.isHidden ? HIDDEN_ROLE_LABEL : role.name,
+            isAdmin: Boolean(effective?.isAdmin),
           }
         : null,
-      permissions: (effective?.permissions ?? [])
-        .filter(Boolean)
-        .map((permission) => permission.key),
+      tenant: tenant
+        ? {
+            id: String(tenant._id),
+            name: tenant.name,
+            slug: tenant.slug,
+            plan: tenant.plan,
+            status: tenant.status,
+          }
+        : null,
+      // The role's permissions plus the ones granted to this person directly.
+      permissions: [
+        ...new Set(
+          [
+            ...(effective?.permissions ?? []),
+            ...((user.permissions as unknown as { key: string }[]) ?? []),
+          ]
+            .filter(Boolean)
+            .map((permission) => permission.key),
+        ),
+      ],
     };
   }
 }

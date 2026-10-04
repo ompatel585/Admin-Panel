@@ -1,11 +1,5 @@
 import type { ApiResponse, Paginated } from "@/types/api";
-import type {
-  CreateRoleRequest,
-  Role,
-  RoleListParams,
-  RoleOption,
-  UpdateRoleRequest,
-} from "@/types/role";
+import type { CreateRoleRequest, Role, RoleListParams, RoleOption, UpdateRoleRequest } from "@/types/role";
 import { baseApi, unwrapData } from "./baseApi";
 
 export const rolesApi = baseApi.injectEndpoints({
@@ -13,6 +7,12 @@ export const rolesApi = baseApi.injectEndpoints({
     getRoles: build.query<Paginated<Role>, RoleListParams | void>({
       query: (params) => ({ url: "/roles", params: params ?? undefined }),
       transformResponse: (r: ApiResponse<Paginated<Role>>) => unwrapData(r),
+      providesTags: ["Role"],
+    }),
+
+    getRole: build.query<Role, string>({
+      query: (id) => `/roles/${id}`,
+      transformResponse: (r: ApiResponse<Role>) => unwrapData(r),
       providesTags: ["Role"],
     }),
 
@@ -35,6 +35,16 @@ export const rolesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Role", "RoleOption", "User", "Me"],
     }),
 
+    updateRolePermissions: build.mutation<Role, { id: string; permissionIds: string[] }>({
+      query: ({ id, permissionIds }) => ({
+        url: `/roles/${id}/permissions`,
+        method: "PUT",
+        body: { permissionIds },
+      }),
+      transformResponse: (r: ApiResponse<Role>) => unwrapData(r),
+      invalidatesTags: ["Role", "Me"],
+    }),
+
     deleteRole: build.mutation<void, string>({
       query: (id) => ({ url: `/roles/${id}`, method: "DELETE" }),
       invalidatesTags: ["Role", "RoleOption"],
@@ -44,8 +54,10 @@ export const rolesApi = baseApi.injectEndpoints({
 
 export const {
   useGetRolesQuery,
+  useGetRoleQuery,
   useGetRoleOptionsQuery,
   useCreateRoleMutation,
   useUpdateRoleMutation,
+  useUpdateRolePermissionsMutation,
   useDeleteRoleMutation,
 } = rolesApi;

@@ -1,6 +1,5 @@
 export interface RoleOption {
   id: string;
   name: string;
+  isAdmin: boolean;
 }
-
-export type ProtectedRoleAction = 'delete' | 'permissions';

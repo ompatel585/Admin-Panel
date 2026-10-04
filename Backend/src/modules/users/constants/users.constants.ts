@@ -14,6 +14,16 @@ export const USER_ERRORS = defineErrors({
     message: 'An account with this email already exists',
     status: HttpStatus.CONFLICT,
   },
+  PERMISSIONS_ADMIN_ONLY: {
+    code: 'USER_PERMISSIONS_ADMIN_ONLY',
+    message: 'Only a super admin can give a user individual permissions',
+    status: HttpStatus.FORBIDDEN,
+  },
+  INVALID_PERMISSIONS: {
+    code: 'USER_INVALID_PERMISSIONS',
+    message: 'One or more selected permissions do not exist',
+    status: HttpStatus.BAD_REQUEST,
+  },
   SELF_ACTION_FORBIDDEN: {
     code: 'USER_SELF_ACTION_FORBIDDEN',
     message: 'You cannot perform this action on your own account',
@@ -26,6 +36,7 @@ export const USER_MESSAGES = {
   UPDATED: 'User updated',
   STATUS_UPDATED: 'User status updated',
   ROLE_UPDATED: 'User role updated',
+  PERMISSIONS_UPDATED: 'User permissions updated',
   DELETED: 'User deleted',
   FETCHED: 'Users fetched',
 } as const;

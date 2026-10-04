@@ -16,11 +16,18 @@ export class Role {
   })
   permissions: Types.ObjectId[];
 
-  /** Bypasses every permission check, including ones created later. */
+  /** Platform operator: bypasses every permission check and sees every tenant. */
   @Prop({ default: false })
-  isSuperAdmin: boolean;
+  isAdmin: boolean;
 
-  /** Assigned to new sign-ups (except the very first user). */
+  /**
+   * Never shown to anyone: excluded from every roles listing and lookup. Set
+   * on the super admin role so its name, description and permissions stay private.
+   */
+  @Prop({ default: false })
+  isHidden: boolean;
+
+  /** Assigned to new sign-ups (except the very first user, who becomes Admin). */
   @Prop({ default: false, index: true })
   isDefault: boolean;
 

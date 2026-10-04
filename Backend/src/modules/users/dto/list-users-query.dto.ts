@@ -9,6 +9,10 @@ export class ListUsersQueryDto extends PaginationQueryDto {
   roleId?: string;
 
   @IsOptional()
+  @IsMongoId()
+  tenantId?: string;
+
+  @IsOptional()
   @Transform(({ value }) => toBoolean(value))
   @IsBoolean()
   isActive?: boolean;

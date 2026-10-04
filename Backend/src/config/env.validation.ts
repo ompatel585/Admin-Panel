@@ -37,6 +37,11 @@ export class EnvironmentVariables {
   @Min(1)
   PASSWORD_RESET_TTL_MINUTES: number;
 
+  /** Shared secret the crawl/index pipeline sends in `x-pipeline-key`. */
+  @IsString()
+  @MinLength(16)
+  PIPELINE_API_KEY: string;
+
   @IsOptional()
   @IsIn(['development', 'production', 'test'])
   NODE_ENV?: string;

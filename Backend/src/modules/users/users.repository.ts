@@ -25,14 +25,19 @@ export class UsersRepository extends BaseRepository<User> {
 
   /** User -> role -> active permissions, used to build the request's `AuthUser`. */
   findAuthContext(id: string | Types.ObjectId) {
-    return this.model.findById(id).populate({
-      path: 'role',
-      populate: {
-        path: 'permissions',
-        match: { isActive: true },
-        select: 'key',
+    return this.model.findById(id).populate([
+      {
+        path: 'role',
+        populate: {
+          path: 'permissions',
+          match: { isActive: true },
+          select: 'key',
+        },
       },
-    });
+      // Granted to this person directly, on top of the role.
+      { path: 'permissions', match: { isActive: true }, select: 'key' },
+      { path: 'tenant', select: 'name slug plan status' },
+    ]);
   }
 
   setPassword(id: string | Types.ObjectId, passwordHash: string) {

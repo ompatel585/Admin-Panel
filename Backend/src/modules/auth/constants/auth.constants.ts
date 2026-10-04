@@ -35,6 +35,11 @@ export const AUTH_ERRORS = defineErrors({
     message: 'Current password is incorrect',
     status: HttpStatus.BAD_REQUEST,
   },
+  WORKSPACE_SUSPENDED: {
+    code: 'AUTH_WORKSPACE_SUSPENDED',
+    message: 'Your workspace has been suspended. Contact support',
+    status: HttpStatus.FORBIDDEN,
+  },
   DEFAULT_ROLE_MISSING: {
     code: 'AUTH_DEFAULT_ROLE_MISSING',
     message: 'No default role is configured for new accounts',

@@ -22,6 +22,25 @@ export class User {
   })
   role: Types.ObjectId;
 
+  /** Workspace the user belongs to; null for platform Admins. */
+  @Prop({
+    type: SchemaTypes.ObjectId,
+    ref: 'Tenant',
+    default: null,
+    index: true,
+  })
+  tenant: Types.ObjectId | null;
+
+  /**
+   * Permissions granted to this person directly, on top of whatever their role
+   * holds. Only a super admin can change them.
+   */
+  @Prop({
+    type: [{ type: SchemaTypes.ObjectId, ref: 'Permission' }],
+    default: [],
+  })
+  permissions: Types.ObjectId[];
+
   @Prop({ default: true })
   isActive: boolean;
 

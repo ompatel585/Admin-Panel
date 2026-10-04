@@ -1,18 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, type PopulateOptions } from 'mongoose';
 import { BaseRepository } from '../../common/repositories/base.repository.js';
 import { escapeRegex } from '../../common/utils/query.util.js';
-import { User } from '../users/schemas/user.schema.js';
 import { Role } from './schemas/role.schema.js';
 
 @Injectable()
 export class RolesRepository extends BaseRepository<Role> {
-  constructor(
-    @InjectModel(Role.name) roleModel: Model<Role>,
-    // Read-only: needed to refuse deleting a role that users still hold.
-    @InjectModel(User.name) private readonly userModel: Model<User>,
-  ) {
+  constructor(@InjectModel(Role.name) roleModel: Model<Role>) {
     super(roleModel);
   }
 
@@ -27,20 +22,65 @@ export class RolesRepository extends BaseRepository<Role> {
     return this.findOne({ isDefault: true });
   }
 
-  findSuperAdmin() {
-    return this.findOne({ isSuperAdmin: true });
+  /** A role by id, unless it is hidden. Hidden roles do not exist as far as callers can tell. */
+  findVisibleById(id: string, populate?: PopulateOptions | PopulateOptions[]) {
+    const query = this.model.findOne({ _id: id, isHidden: { $ne: true } });
+    return populate ? query.populate(populate) : query;
   }
 
-  clearDefault(exceptId?: string | Types.ObjectId) {
+  hideAdminRoles() {
     return this.model.updateMany(
-      exceptId
-        ? { isDefault: true, _id: { $ne: exceptId } }
-        : { isDefault: true },
-      { $set: { isDefault: false } },
+      { isAdmin: true, isHidden: { $ne: true } },
+      { $set: { isHidden: true } },
     );
   }
 
-  async hasUsers(roleId: string | Types.ObjectId): Promise<boolean> {
-    return (await this.userModel.exists({ role: roleId })) !== null;
+  async hasUsers(roleId: string): Promise<boolean> {
+    const holder = await this.model.db
+      .collection('users')
+      .findOne({ role: new Types.ObjectId(roleId) }, { projection: { _id: 1 } });
+    return holder !== null;
+  }
+
+  findAdmin() {
+    return this.findOne({ isAdmin: true });
+  }
+
+  /**
+   * One-off upgrade of data written before the Admin/User model: roles flagged
+   * with the old `isSuperAdmin` become (or fold into) the Admin role and their
+   * users move over. Uses the raw collections because the field is no longer
+   * part of the schema. Returns how many legacy roles were migrated.
+   */
+  async migrateLegacySuperAdmin(): Promise<number> {
+    const roles = this.model.collection;
+    const users = this.model.db.collection('users');
+
+    const legacy = await roles
+      .find({ isSuperAdmin: true, isAdmin: { $ne: true } })
+      .toArray();
+    if (legacy.length === 0) return 0;
+
+    let admin = await roles.findOne({ isAdmin: true });
+    let obsolete = legacy;
+    if (!admin) {
+      const [first, ...rest] = legacy;
+      await roles.updateOne(
+        { _id: first._id },
+        {
+          $set: { isAdmin: true, isSystem: true, name: 'Admin' },
+          $unset: { isSuperAdmin: '' },
+        },
+      );
+      admin = first;
+      obsolete = rest;
+    }
+
+    const ids = obsolete.map((role) => role._id);
+    if (ids.length > 0) {
+      await users.updateMany({ role: { $in: ids } }, { $set: { role: admin._id } });
+      await roles.deleteMany({ _id: { $in: ids } });
+    }
+    return legacy.length;
   }
 }

@@ -1,8 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
-  IsArray,
   IsBoolean,
-  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -26,15 +24,6 @@ export class CreateRoleDto {
   description?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsMongoId({ each: true })
-  permissionIds?: string[];
-
-  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  isDefault?: boolean;
 }

@@ -1,13 +1,16 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Can } from "@/components/guards/Can";
 import { RequirePermission } from "@/components/guards/RequirePermission";
-import { Button, ConfirmDialog, PageHeader } from "@/components/ui";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
-import { PermissionFormModal, type PermissionModalState } from "@/sections/permissions/PermissionFormModal";
-import { PermissionsTree } from "@/sections/permissions/PermissionsTree";
+import { PermissionFormDialog, type PermissionModalState } from "@/sections/permissions/permission-form-dialog";
+import { PermissionsTree } from "@/sections/permissions/permissions-tree";
 import { useDeletePermissionMutation, useGetPermissionTreeQuery } from "@/services/api";
 import type { PermissionNode } from "@/types/permission";
 import { succeeded } from "@/utils/safe-unwrap";
@@ -27,10 +30,12 @@ export function PermissionsView() {
     <RequirePermission permission={PERMISSIONS.permissions.read}>
       <PageHeader
         title="Permissions"
-        subtitle="Modules and their sub-permissions. Anything you add here can be granted to roles."
+        description="Modules and their sub-permissions. Anything you add here can be granted to roles."
         actions={
           <Can permission={PERMISSIONS.permissions.create}>
-            <Button onClick={() => setModal({ type: "create-module" })}>New module</Button>
+            <Button onClick={() => setModal({ type: "create-module" })}>
+              <Plus /> New module
+            </Button>
           </Can>
         }
       />
@@ -46,15 +51,15 @@ export function PermissionsView() {
         onDelete={setToDelete}
       />
 
-      {modal && <PermissionFormModal state={modal} onClose={() => setModal(null)} />}
+      {modal && <PermissionFormDialog state={modal} onClose={() => setModal(null)} />}
 
       <ConfirmDialog
         open={Boolean(toDelete)}
         title="Delete permission"
         description={
           <>
-            Delete <strong>{toDelete?.key}</strong>? Permissions that have sub-permissions or are assigned to a role
-            can&apos;t be deleted.
+            Delete <strong>{toDelete?.key}</strong>? Permissions that have sub-permissions or are assigned to a role can&apos;t be
+            deleted.
           </>
         }
         loading={deleting}

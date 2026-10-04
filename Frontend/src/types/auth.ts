@@ -1,9 +1,13 @@
+import type { TenantPlan, TenantStatus } from "./tenant";
+
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: { id: string; name: string; isSuperAdmin: boolean } | null;
-  /** Permission keys held. Empty for Super Admin, who bypasses checks. */
+  role: { id: string; name: string; isAdmin: boolean } | null;
+  /** The signed-in user's workspace; null for platform Admins. */
+  tenant: { id: string; name: string; slug: string; plan: TenantPlan; status: TenantStatus } | null;
+  /** Permission keys held. Empty for Admin, who bypasses checks. */
   permissions: string[];
 }
 

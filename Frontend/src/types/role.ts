@@ -13,7 +13,7 @@ export interface Role {
   name: string;
   description: string;
   permissions: RolePermissionRef[];
-  isSuperAdmin: boolean;
+  isAdmin: boolean;
   isDefault: boolean;
   isSystem: boolean;
   isActive: boolean;
@@ -22,18 +22,17 @@ export interface Role {
 export interface RoleOption {
   id: string;
   name: string;
+  isAdmin: boolean;
+}
+
+export interface RoleListParams extends ListParams {
+  isActive?: boolean;
 }
 
 export interface CreateRoleRequest {
   name: string;
   description?: string;
-  permissionIds?: string[];
   isActive?: boolean;
-  isDefault?: boolean;
 }
 
 export type UpdateRoleRequest = Partial<CreateRoleRequest>;
-
-export interface RoleListParams extends ListParams {
-  isActive?: boolean;
-}

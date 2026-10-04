@@ -6,6 +6,7 @@ export const createUserSchema = yup.object({
   email: rules.email(),
   password: rules.password(),
   roleId: rules.requiredSelect("Role"),
+  tenantId: yup.string().defined(),
   isActive: rules.boolean(),
 });
 

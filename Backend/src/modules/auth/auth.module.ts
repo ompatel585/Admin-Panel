@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import type { AppConfig } from '../../config/configuration.js';
 import { MailModule } from '../mail/mail.module.js';
 import { RolesModule } from '../roles/roles.module.js';
+import { TenantsModule } from '../tenants/tenants.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
@@ -31,6 +32,7 @@ import {
     }),
     UsersModule,
     RolesModule,
+    TenantsModule,
     MailModule,
   ],
   controllers: [AuthController],

@@ -6,9 +6,13 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor.
 import { configuration } from './config/configuration.js';
 import { validateEnv } from './config/env.validation.js';
 import { DatabaseModule } from './database/database.module.js';
-import { SeedModule } from './database/seed/seed.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
+import { CrawlJobsModule } from './modules/crawl-jobs/crawl-jobs.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
+import { PipelineModule } from './modules/pipeline/pipeline.module.js';
+import { SitesModule } from './modules/sites/sites.module.js';
+import { TenantsModule } from './modules/tenants/tenants.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PermissionsGuard } from './modules/permissions/guards/permissions.guard.js';
 import { PermissionsModule } from './modules/permissions/permissions.module.js';
@@ -23,11 +27,15 @@ import { UsersModule } from './modules/users/users.module.js';
       validate: validateEnv,
     }),
     DatabaseModule,
-    SeedModule,
     AuthModule,
     UsersModule,
     RolesModule,
     PermissionsModule,
+    TenantsModule,
+    SitesModule,
+    CrawlJobsModule,
+    DashboardModule,
+    PipelineModule,
     HealthModule,
   ],
   providers: [

@@ -5,6 +5,7 @@ export interface AppConfig {
   database: { uri: string };
   jwt: { secret: string; expiresInSeconds: number };
   auth: { passwordResetTtlMinutes: number };
+  pipeline: { apiKey: string };
 }
 
 export const configuration = (): AppConfig => ({
@@ -25,4 +26,5 @@ export const configuration = (): AppConfig => ({
       10,
     ),
   },
+  pipeline: { apiKey: process.env.PIPELINE_API_KEY as string },
 });

@@ -10,7 +10,8 @@ export const PERMISSION_KEY_REGEX = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
 /**
  * Keys that built-in endpoints are guarded by. Controllers have to name the
  * permission they require, so these strings live in code; the permissions
- * themselves (names, hierarchy, activation, role assignment) live in the DB.
+ * themselves (names, hierarchy, activation, role assignment) live in the DB
+ * and are created from `seeds/permissions.seed.ts`.
  */
 export const PERMISSION_KEYS = {
   USERS: {
@@ -34,44 +35,31 @@ export const PERMISSION_KEYS = {
     UPDATE: 'permissions.update',
     DELETE: 'permissions.delete',
   },
+  TENANTS: {
+    MODULE: 'tenants',
+    /** View the caller's own workspace. */
+    READ: 'tenants.read',
+    /** List every workspace on the platform. */
+    LIST: 'tenants.list',
+    CREATE: 'tenants.create',
+    UPDATE: 'tenants.update',
+    DELETE: 'tenants.delete',
+    SUSPEND: 'tenants.suspend',
+  },
+  SITES: {
+    MODULE: 'sites',
+    READ: 'sites.read',
+    CREATE: 'sites.create',
+    UPDATE: 'sites.update',
+    DELETE: 'sites.delete',
+    CRAWL: 'sites.crawl',
+  },
+  CRAWL_JOBS: {
+    MODULE: 'crawl_jobs',
+    READ: 'crawl_jobs.read',
+    CANCEL: 'crawl_jobs.cancel',
+  },
 } as const;
-
-export interface CatalogEntry {
-  key: string;
-  name: string;
-  description: string;
-  children: { key: string; name: string; description: string }[];
-}
-
-const crudEntry = (
-  moduleKey: string,
-  label: string,
-  plural: string,
-): CatalogEntry => ({
-  key: moduleKey,
-  name: label,
-  description: `Access to the ${label.toLowerCase()} section`,
-  children: [
-    { action: 'read', name: 'View', verb: 'View' },
-    { action: 'create', name: 'Create', verb: 'Create' },
-    { action: 'update', name: 'Update', verb: 'Edit' },
-    { action: 'delete', name: 'Delete', verb: 'Delete' },
-  ].map(({ action, name, verb }) => ({
-    key: `${moduleKey}.${action}`,
-    name,
-    description: `${verb} ${plural}`,
-  })),
-});
-
-/**
- * Bootstrap defaults only. The seeder creates whatever is missing and never
- * overwrites a permission an admin has edited.
- */
-export const DEFAULT_PERMISSION_CATALOG: CatalogEntry[] = [
-  crudEntry(PERMISSION_KEYS.USERS.MODULE, 'Users', 'users'),
-  crudEntry(PERMISSION_KEYS.ROLES.MODULE, 'Roles', 'roles'),
-  crudEntry(PERMISSION_KEYS.PERMISSIONS.MODULE, 'Permissions', 'permissions'),
-];
 
 export const PERMISSION_ERRORS = defineErrors({
   NOT_FOUND: {

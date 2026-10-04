@@ -3,9 +3,9 @@
 import { Form, Formik } from "formik";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SubmitButton, TextField, formStyles } from "@/components/form";
+import { SubmitButton, TextField } from "@/components/form";
+import { AuthShell } from "@/components/layout/auth-shell";
 import { ROUTES } from "@/constants/routes";
-import { AuthLayout } from "@/layouts/AuthLayout";
 import { signupSchema, type SignupValues } from "@/lib/validation/auth.schemas";
 import { useSignupMutation } from "@/services/api";
 import { succeeded } from "@/utils/safe-unwrap";
@@ -17,8 +17,9 @@ export function SignupView() {
   const [signup] = useSignupMutation();
 
   return (
-    <AuthLayout
-      title="Create your account"
+    <AuthShell
+      title="Create your workspace"
+      description="Sign up, add your website, and we'll crawl and index it."
       footer={
         <>
           Already registered? <Link href={ROUTES.login}>Sign in</Link>
@@ -32,7 +33,7 @@ export function SignupView() {
           if (await succeeded(signup({ name, email, password }).unwrap())) router.replace(ROUTES.dashboard);
         }}
       >
-        <Form className={formStyles.form} noValidate>
+        <Form className="grid gap-4" noValidate>
           <TextField name="name" label="Full name" autoComplete="name" />
           <TextField name="email" label="Email" type="email" autoComplete="email" />
           <TextField
@@ -43,9 +44,9 @@ export function SignupView() {
             hint="At least 8 characters, with a letter and a number."
           />
           <TextField name="confirmPassword" label="Confirm password" type="password" autoComplete="new-password" />
-          <SubmitButton block>Create account</SubmitButton>
+          <SubmitButton className="w-full">Create account</SubmitButton>
         </Form>
       </Formik>
-    </AuthLayout>
+    </AuthShell>
   );
 }

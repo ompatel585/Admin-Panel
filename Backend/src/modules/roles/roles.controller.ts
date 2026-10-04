@@ -10,19 +10,18 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ResponseMessage } from '../../common/decorators/response-message.decorator.js';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
+import type { AuthUser } from '../auth/types/auth.type.js';
 import { PERMISSION_KEYS } from '../permissions/constants/permissions.constants.js';
 import { RequirePermissions } from '../permissions/decorators/require-permissions.decorator.js';
 import { ROLE_MESSAGES } from './constants/roles.constants.js';
-import { ProtectSystemRole } from './decorators/protect-system-role.decorator.js';
 import { CreateRoleDto } from './dto/create-role.dto.js';
 import { ListRolesQueryDto } from './dto/list-roles-query.dto.js';
 import { UpdateRolePermissionsDto } from './dto/update-role-permissions.dto.js';
 import { UpdateRoleDto } from './dto/update-role.dto.js';
-import { SystemRoleGuard } from './guards/system-role.guard.js';
 import { NormalizePermissionIdsPipe } from './pipes/normalize-permission-ids.pipe.js';
 import { RolesService } from './roles.service.js';
 
@@ -54,24 +53,23 @@ export class RolesController {
   @Post()
   @RequirePermissions(CREATE)
   @ResponseMessage(ROLE_MESSAGES.CREATED)
-  create(@Body(NormalizePermissionIdsPipe) dto: CreateRoleDto) {
-    return this.rolesService.create(dto);
+  create(@CurrentUser() actor: AuthUser, @Body() dto: CreateRoleDto) {
+    return this.rolesService.create(actor, dto);
   }
 
   @Patch(':id')
   @RequirePermissions(UPDATE)
   @ResponseMessage(ROLE_MESSAGES.UPDATED)
   update(
+    @CurrentUser() actor: AuthUser,
     @Param('id', ParseObjectIdPipe) id: string,
-    @Body(NormalizePermissionIdsPipe) dto: UpdateRoleDto,
+    @Body() dto: UpdateRoleDto,
   ) {
-    return this.rolesService.update(id, dto);
+    return this.rolesService.update(actor, id, dto);
   }
 
   @Put(':id/permissions')
   @RequirePermissions(UPDATE)
-  @ProtectSystemRole('permissions')
-  @UseGuards(SystemRoleGuard)
   @ResponseMessage(ROLE_MESSAGES.PERMISSIONS_UPDATED)
   updatePermissions(
     @Param('id', ParseObjectIdPipe) id: string,
@@ -83,10 +81,11 @@ export class RolesController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(DELETE)
-  @ProtectSystemRole('delete')
-  @UseGuards(SystemRoleGuard)
   @ResponseMessage(ROLE_MESSAGES.DELETED)
-  remove(@Param('id', ParseObjectIdPipe) id: string) {
-    return this.rolesService.remove(id);
+  remove(
+    @CurrentUser() actor: AuthUser,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
+    return this.rolesService.remove(actor, id);
   }
 }

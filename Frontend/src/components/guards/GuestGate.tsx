@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { PageSpinner } from "@/components/ui/Spinner";
+import { PageSpinner } from "@/components/shared/page-spinner";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 

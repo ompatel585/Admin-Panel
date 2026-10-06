@@ -28,17 +28,15 @@ export function PermissionsView() {
 
   return (
     <RequirePermission permission={PERMISSIONS.permissions.read}>
-      <PageHeader
-        title="Permissions"
-        description="Modules and their sub-permissions. Anything you add here can be granted to roles."
-        actions={
-          <Can permission={PERMISSIONS.permissions.create}>
-            <Button onClick={() => setModal({ type: "create-module" })}>
-              <Plus /> New module
-            </Button>
-          </Can>
-        }
-      />
+      <PageHeader title="Permissions" description="Modules and their sub-permissions. Anything you add here can be granted to roles." />
+
+      <Can permission={PERMISSIONS.permissions.create}>
+        <div className="mb-4 flex justify-end">
+          <Button onClick={() => setModal({ type: "create-module" })}>
+            <Plus /> Add module
+          </Button>
+        </div>
+      </Can>
 
       <PermissionsTree
         tree={tree}

@@ -1,21 +1,17 @@
 "use client";
 
 import { Pencil, Plus, Power, ShieldCheck, Trash2, Users } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
-import { Can } from "@/components/guards/Can";
 import { RequirePermission } from "@/components/guards/RequirePermission";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { DataPagination } from "@/components/shared/data-pagination";
-import { EmptyState } from "@/components/shared/empty-state";
+import { DataTableCard } from "@/components/shared/data-table-card";
+import { RowActions } from "@/components/shared/row-actions";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { TenantFilter } from "@/components/shared/tenant-filter";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -25,7 +21,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePermissions } from "@/hooks/usePermissions";
 import { formatDateTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { UserFormDialog } from "@/sections/users/user-form-dialog";
 import {
   useDeleteUserMutation,
@@ -82,26 +77,19 @@ export function UsersView() {
       <PageHeader
         title="Users"
         description={isAdmin ? "Everyone who can sign in, across all workspaces." : "People in your workspace."}
-        actions={
-          <Can permission={PERMISSIONS.users.create}>
-            <Button onClick={() => setModal({ type: "create" })}>
-              <Plus /> New user
-            </Button>
-          </Can>
-        }
       />
 
-      <Card className="gap-0 py-0">
-        <div className="flex flex-wrap items-center gap-2 border-b p-3">
-          <Input
-            className="max-w-xs"
-            placeholder="Search name or email…"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-          />
+      <DataTableCard
+        search={{
+          value: search,
+          placeholder: "Search by name or email",
+          onChange: (value) => {
+            setSearch(value);
+            setPage(1);
+          },
+        }}
+        filters={
+          <>
           <Select
             items={roleFilterItems}
             value={roleId}
@@ -128,11 +116,20 @@ export function UsersView() {
               setPage(1);
             }}
           />
-        </div>
-
-        {data && data.items.length === 0 ? (
-          <EmptyState icon={Users} title="No users found" />
-        ) : (
+          </>
+        }
+        action={
+          can(PERMISSIONS.users.create) && (
+            <Button onClick={() => setModal({ type: "create" })}>
+              <Plus /> Add user
+            </Button>
+          )
+        }
+        isEmpty={data?.items.length === 0}
+        empty={{ icon: Users, title: "No users found" }}
+        meta={data?.meta}
+        onPageChange={setPage}
+      >
           <Table>
             <TableHeader>
               <TableRow>
@@ -201,63 +198,45 @@ export function UsersView() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "Never"}</TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        {canUpdate && !isSelf && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className={user.isActive ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}
-                            aria-label={`${user.isActive ? "Deactivate" : "Activate"} ${user.name}`}
-                            title={user.isActive ? "Deactivate" : "Activate"}
-                            onClick={() => void succeeded(updateStatus({ id: user.id, isActive: !user.isActive }).unwrap())}
-                          >
-                            <Power />
-                          </Button>
-                        )}
-                        {canUpdate && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="text-primary"
-                            aria-label={`Edit ${user.name}`}
-                            title="Edit"
-                            onClick={() => setModal({ type: "edit", user })}
-                          >
-                            <Pencil />
-                          </Button>
-                        )}
-                        {isAdmin && canUpdate && (
-                          <Link
-                            href={`${ROUTES.users}/${user.id}/permissions`}
-                            aria-label={`Permissions for ${user.name}`}
-                            title="Individual permissions"
-                            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-                          >
-                            <ShieldCheck />
-                          </Link>
-                        )}
-                        {can(PERMISSIONS.users.delete) && !isSelf && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="text-destructive"
-                            aria-label={`Delete ${user.name}`}
-                            title="Delete"
-                            onClick={() => setToDelete(user)}
-                          >
-                            <Trash2 />
-                          </Button>
-                        )}
-                      </div>
+                      <RowActions
+                        subject={user.name}
+                        actions={[
+                          {
+                            label: user.isActive ? "Deactivate" : "Activate",
+                            icon: Power,
+                            tone: user.isActive ? "warning" : "success",
+                            hidden: !canUpdate || isSelf,
+                            onClick: () => void succeeded(updateStatus({ id: user.id, isActive: !user.isActive }).unwrap()),
+                          },
+                          {
+                            label: "Edit",
+                            icon: Pencil,
+                            tone: "primary",
+                            hidden: !canUpdate,
+                            onClick: () => setModal({ type: "edit", user }),
+                          },
+                          {
+                            label: "Permissions",
+                            icon: ShieldCheck,
+                            hidden: !isAdmin || !canUpdate,
+                            href: `${ROUTES.users}/${user.id}/permissions`,
+                          },
+                          {
+                            label: "Delete",
+                            icon: Trash2,
+                            tone: "danger",
+                            hidden: !can(PERMISSIONS.users.delete) || isSelf,
+                            onClick: () => setToDelete(user),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
-        )}
-        {data && <DataPagination meta={data.meta} onPageChange={setPage} />}
-      </Card>
+      </DataTableCard>
 
       {modal && <UserFormDialog user={modal.type === "edit" ? modal.user : null} onClose={() => setModal(null)} />}
 

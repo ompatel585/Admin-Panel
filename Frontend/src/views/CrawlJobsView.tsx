@@ -4,13 +4,11 @@ import { ListChecks, X } from "lucide-react";
 import { useState } from "react";
 import { RequirePermission } from "@/components/guards/RequirePermission";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { DataPagination } from "@/components/shared/data-pagination";
-import { EmptyState } from "@/components/shared/empty-state";
+import { DataTableCard } from "@/components/shared/data-table-card";
+import { RowActions } from "@/components/shared/row-actions";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { TenantFilter } from "@/components/shared/tenant-filter";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -65,8 +63,9 @@ export function CrawlJobsView() {
     <RequirePermission permission={PERMISSIONS.crawlJobs.read}>
       <PageHeader title="Crawl jobs" description="Every crawl, chunk and embed run, with live progress." />
 
-      <Card className="gap-0 py-0">
-        <div className="flex flex-wrap items-center gap-2 border-b p-3">
+      <DataTableCard
+        filters={
+          <>
           <Select
             items={STATUS_OPTIONS}
             value={status}
@@ -93,11 +92,13 @@ export function CrawlJobsView() {
               setPage(1);
             }}
           />
-        </div>
-
-        {data && data.items.length === 0 ? (
-          <EmptyState icon={ListChecks} title="No crawl jobs" description="Jobs appear when a website is added or re-crawled." />
-        ) : (
+          </>
+        }
+        isEmpty={data?.items.length === 0}
+        empty={{ icon: ListChecks, title: "No crawl jobs", description: "Jobs appear when a website is added or re-crawled." }}
+        meta={data?.meta}
+        onPageChange={setPage}
+      >
           <Table>
             <TableHeader>
               <TableRow>
@@ -107,7 +108,7 @@ export function CrawlJobsView() {
                 <TableHead className="text-right">Pages</TableHead>
                 <TableHead className="text-right">Chunks</TableHead>
                 <TableHead>Started</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -147,20 +148,25 @@ export function CrawlJobsView() {
                       {job.startedAt ? formatDateTime(job.startedAt) : formatDateTime(job.createdAt)}
                     </TableCell>
                     <TableCell>
-                      {active && can(PERMISSIONS.crawlJobs.cancel) && (
-                        <Button variant="ghost" size="icon-sm" aria-label="Cancel job" onClick={() => setToCancel(job)}>
-                          <X />
-                        </Button>
-                      )}
+                      <RowActions
+                        subject={job.site?.name ?? "job"}
+                        actions={[
+                          {
+                            label: "Cancel",
+                            icon: X,
+                            tone: "danger",
+                            hidden: !active || !can(PERMISSIONS.crawlJobs.cancel),
+                            onClick: () => setToCancel(job),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
-        )}
-        {data && <DataPagination meta={data.meta} onPageChange={setPage} />}
-      </Card>
+      </DataTableCard>
 
       <ConfirmDialog
         open={Boolean(toCancel)}

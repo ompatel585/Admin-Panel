@@ -1,18 +1,14 @@
 "use client";
 
-import { Building2, MoreHorizontal, Plus } from "lucide-react";
+import { Building2, Pencil, Plus, Power, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Can } from "@/components/guards/Can";
 import { RequirePermission } from "@/components/guards/RequirePermission";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { DataPagination } from "@/components/shared/data-pagination";
-import { EmptyState } from "@/components/shared/empty-state";
+import { DataTableCard } from "@/components/shared/data-table-card";
+import { RowActions } from "@/components/shared/row-actions";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PERMISSIONS } from "@/constants/permissions";
 import { PAGE_SIZE, SEARCH_DEBOUNCE_MS } from "@/constants/ui";
@@ -46,34 +42,29 @@ export function TenantsView() {
 
   return (
     <RequirePermission permission={PERMISSIONS.tenants.list}>
-      <PageHeader
-        title="Workspaces"
-        description="Every customer on the platform, with their plan and how much of it they use."
-        actions={
-          <Can permission={PERMISSIONS.tenants.create}>
+      <PageHeader title="Workspaces" description="Every customer on the platform, with their plan and how much of it they use." />
+
+      <DataTableCard
+        search={{
+          value: search,
+          placeholder: "Search workspaces",
+          onChange: (value) => {
+            setSearch(value);
+            setPage(1);
+          },
+        }}
+        action={
+          can(PERMISSIONS.tenants.create) && (
             <Button onClick={() => setModal({ type: "create" })}>
-              <Plus /> New workspace
+              <Plus /> Add workspace
             </Button>
-          </Can>
+          )
         }
-      />
-
-      <Card className="gap-0 py-0">
-        <div className="border-b p-3">
-          <Input
-            className="max-w-xs"
-            placeholder="Search workspaces…"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
-
-        {data && data.items.length === 0 ? (
-          <EmptyState icon={Building2} title="No workspaces found" />
-        ) : (
+        isEmpty={data?.items.length === 0}
+        empty={{ icon: Building2, title: "No workspaces found" }}
+        meta={data?.meta}
+        onPageChange={setPage}
+      >
           <Table>
             <TableHeader>
               <TableRow>
@@ -83,7 +74,7 @@ export function TenantsView() {
                 <TableHead className="text-right">Websites</TableHead>
                 <TableHead className="text-right">Users</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -91,7 +82,9 @@ export function TenantsView() {
                 <TableRow key={tenant.id}>
                   <TableCell>
                     <p className="font-medium">{tenant.name}</p>
-                    <p className="text-xs text-muted-foreground">{tenant.slug}</p>
+                    <p className="font-mono text-xs text-muted-foreground" title="Workspace (tenant) id">
+                      {tenant.id}
+                    </p>
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={tenant.plan} />
@@ -103,40 +96,41 @@ export function TenantsView() {
                   <TableCell className="text-right">{tenant.usage?.users ?? 0}</TableCell>
                   <TableCell className="text-muted-foreground">{formatDate(tenant.createdAt)}</TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${tenant.name}`} />}>
-                        <MoreHorizontal />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {can(PERMISSIONS.tenants.update) && (
-                          <DropdownMenuItem onClick={() => setModal({ type: "edit", tenant })}>Edit</DropdownMenuItem>
-                        )}
-                        {can(PERMISSIONS.tenants.suspend) && (
-                          <DropdownMenuItem
-                            onClick={() =>
-                              void succeeded(
-                                updateStatus({ id: tenant.id, status: tenant.status === "active" ? "suspended" : "active" }).unwrap(),
-                              )
-                            }
-                          >
-                            {tenant.status === "active" ? "Suspend" : "Reactivate"}
-                          </DropdownMenuItem>
-                        )}
-                        {can(PERMISSIONS.tenants.delete) && (
-                          <DropdownMenuItem variant="destructive" onClick={() => setToDelete(tenant)}>
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <RowActions
+                      subject={tenant.name}
+                      actions={[
+                        {
+                          label: tenant.status === "active" ? "Suspend" : "Reactivate",
+                          icon: Power,
+                          tone: tenant.status === "active" ? "warning" : "success",
+                          hidden: !can(PERMISSIONS.tenants.suspend),
+                          onClick: () =>
+                            void succeeded(
+                              updateStatus({ id: tenant.id, status: tenant.status === "active" ? "suspended" : "active" }).unwrap(),
+                            ),
+                        },
+                        {
+                          label: "Edit",
+                          icon: Pencil,
+                          tone: "primary",
+                          hidden: !can(PERMISSIONS.tenants.update),
+                          onClick: () => setModal({ type: "edit", tenant }),
+                        },
+                        {
+                          label: "Delete",
+                          icon: Trash2,
+                          tone: "danger",
+                          hidden: !can(PERMISSIONS.tenants.delete),
+                          onClick: () => setToDelete(tenant),
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        )}
-        {data && <DataPagination meta={data.meta} onPageChange={setPage} />}
-      </Card>
+      </DataTableCard>
 
       {modal && <TenantFormDialog tenant={modal.type === "edit" ? modal.tenant : null} onClose={() => setModal(null)} />}
 

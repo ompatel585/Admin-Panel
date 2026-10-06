@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, Plus, ShieldCheck, Users } from "lucide-react";
+import { Pencil, Plus, Power, ShieldCheck, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Can } from "@/components/guards/Can";
@@ -11,10 +11,10 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { TenantFilter } from "@/components/shared/tenant-filter";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -136,27 +136,47 @@ export function UsersView() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>User</TableHead>
-                {isAdmin && <TableHead>Workspace</TableHead>}
-                <TableHead>Role</TableHead>
+                <TableHead>User info</TableHead>
+                <TableHead>Workspace</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>Last login</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data?.items.map((user) => {
                 const isSelf = user.id === me?.id;
-                const canChangeRole = can(PERMISSIONS.users.update) && !isSelf;
+                const canUpdate = can(PERMISSIONS.users.update);
+                const canChangeRole = canUpdate && !isSelf;
                 return (
                   <TableRow key={user.id}>
                     <TableCell>
-                      <p className="font-medium">
-                        {user.name} {isSelf && <Badge variant="secondary">You</Badge>}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      <div className="flex items-center gap-3">
+                        <UserAvatar name={user.name} size="md" />
+                        <div className="min-w-0">
+                          <p className="font-medium">
+                            {user.name} {isSelf && <Badge variant="secondary">You</Badge>}
+                          </p>
+                          <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                      </div>
                     </TableCell>
-                    {isAdmin && <TableCell>{user.tenant?.name ?? <span className="text-muted-foreground">Platform</span>}</TableCell>}
+                    <TableCell>
+                      {user.tenant ? (
+                        <>
+                          <p>{user.tenant.name}</p>
+                          <p className="font-mono text-xs text-muted-foreground" title="Workspace (tenant) id">
+                            {user.tenant.id}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">No workspace</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={user.isActive ? "active" : "inactive"} />
+                    </TableCell>
                     <TableCell>
                       {canChangeRole ? (
                         <Select
@@ -164,7 +184,7 @@ export function UsersView() {
                           value={user.role.id}
                           onValueChange={(next) => changeRole(user, next as string)}
                         >
-                          <SelectTrigger size="sm" className="w-32" aria-label={`Role for ${user.name}`}>
+                          <SelectTrigger size="sm" className="w-36" aria-label={`Role for ${user.name}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -179,44 +199,55 @@ export function UsersView() {
                         <Badge variant="secondary">{user.role.name}</Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <StatusBadge status={user.isActive ? "active" : "inactive"} />
-                    </TableCell>
                     <TableCell className="text-muted-foreground">{user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "Never"}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
-                      {isAdmin && can(PERMISSIONS.users.update) && (
-                        <Link
-                          href={`${ROUTES.users}/${user.id}/permissions`}
-                          aria-label={`Permissions for ${user.name}`}
-                          title="Individual permissions"
-                          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-                        >
-                          <ShieldCheck />
-                        </Link>
-                      )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${user.name}`} />}>
-                          <MoreHorizontal />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {can(PERMISSIONS.users.update) && (
-                            <DropdownMenuItem onClick={() => setModal({ type: "edit", user })}>Edit</DropdownMenuItem>
-                          )}
-                          {can(PERMISSIONS.users.update) && !isSelf && (
-                            <DropdownMenuItem
-                              onClick={() => void succeeded(updateStatus({ id: user.id, isActive: !user.isActive }).unwrap())}
-                            >
-                              {user.isActive ? "Deactivate" : "Activate"}
-                            </DropdownMenuItem>
-                          )}
-                          {can(PERMISSIONS.users.delete) && !isSelf && (
-                            <DropdownMenuItem variant="destructive" onClick={() => setToDelete(user)}>
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        {canUpdate && !isSelf && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className={user.isActive ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}
+                            aria-label={`${user.isActive ? "Deactivate" : "Activate"} ${user.name}`}
+                            title={user.isActive ? "Deactivate" : "Activate"}
+                            onClick={() => void succeeded(updateStatus({ id: user.id, isActive: !user.isActive }).unwrap())}
+                          >
+                            <Power />
+                          </Button>
+                        )}
+                        {canUpdate && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-primary"
+                            aria-label={`Edit ${user.name}`}
+                            title="Edit"
+                            onClick={() => setModal({ type: "edit", user })}
+                          >
+                            <Pencil />
+                          </Button>
+                        )}
+                        {isAdmin && canUpdate && (
+                          <Link
+                            href={`${ROUTES.users}/${user.id}/permissions`}
+                            aria-label={`Permissions for ${user.name}`}
+                            title="Individual permissions"
+                            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+                          >
+                            <ShieldCheck />
+                          </Link>
+                        )}
+                        {can(PERMISSIONS.users.delete) && !isSelf && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-destructive"
+                            aria-label={`Delete ${user.name}`}
+                            title="Delete"
+                            onClick={() => setToDelete(user)}
+                          >
+                            <Trash2 />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

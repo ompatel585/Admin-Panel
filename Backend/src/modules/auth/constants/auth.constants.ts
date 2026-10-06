@@ -52,6 +52,7 @@ export const AUTH_MESSAGES = {
   LOGGED_IN: 'Logged in',
   LOGGED_OUT: 'Logged out',
   PROFILE: 'Profile fetched',
+  PROFILE_UPDATED: 'Profile updated',
   RESET_REQUESTED:
     'If an account exists for that email, a reset link has been sent',
   PASSWORD_RESET: 'Password has been reset',

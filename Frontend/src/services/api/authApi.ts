@@ -6,6 +6,7 @@ import type {
   LoginRequest,
   ResetPasswordRequest,
   SignupRequest,
+  UpdateProfileRequest,
 } from "@/types/auth";
 import { baseApi, unwrapData } from "./baseApi";
 
@@ -65,6 +66,21 @@ export const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/auth/reset-password", method: "POST", body }),
     }),
 
+    updateProfile: build.mutation<AuthUser, UpdateProfileRequest>({
+      query: (body) => ({ url: "/auth/me", method: "PATCH", body }),
+      transformResponse: (r: ApiResponse<AuthUser>) => unwrapData(r),
+      // The session holds the name and email shown everywhere, so refresh it in place.
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(authApi.util.upsertQueryData("getMe", undefined, data));
+        } catch {
+          // Reported by the feedback middleware.
+        }
+      },
+      invalidatesTags: ["User"],
+    }),
+
     changePassword: build.mutation<void, ChangePasswordRequest>({
       query: (body) => ({ url: "/auth/change-password", method: "POST", body }),
     }),
@@ -78,5 +94,6 @@ export const {
   useLogoutMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useUpdateProfileMutation,
   useChangePasswordMutation,
 } = authApi;

@@ -28,10 +28,12 @@ interface UserFormDialogProps {
 
 /** Workspace picker: only a super admin chooses one; everyone else adds to their own workspace. */
 function WorkspaceField() {
-  const { isAdmin } = usePermissions();
+  const { isAdmin, tenant } = usePermissions();
   const { data: tenants = [] } = useGetTenantOptionsQuery(undefined, { skip: !isAdmin });
 
-  if (!isAdmin) return null;
+  if (!isAdmin) {
+    return tenant ? <WorkspaceNote name={tenant.name} id={tenant.id} /> : null;
+  }
   return (
     <SelectField
       name="tenantId"
@@ -39,6 +41,15 @@ function WorkspaceField() {
       placeholder="Choose a workspace"
       options={tenants.map((tenant) => ({ value: tenant.id, label: tenant.name }))}
     />
+  );
+}
+
+/** Read-only line naming the workspace (tenant) a user belongs to. */
+function WorkspaceNote({ name, id }: { name: string; id: string }) {
+  return (
+    <p className="text-sm text-muted-foreground">
+      Workspace: <span className="text-foreground">{name}</span> <span className="font-mono text-xs">({id})</span>
+    </p>
   );
 }
 
@@ -70,6 +81,7 @@ export function UserFormDialog({ user, onClose }: UserFormDialogProps) {
             <Form className="grid gap-4" noValidate>
               <TextField name="name" label="Full name" autoComplete="off" />
               <TextField name="email" label="Email" type="email" autoComplete="off" />
+              {user.tenant && <WorkspaceNote name={user.tenant.name} id={user.tenant.id} />}
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={onClose}>
                   Cancel

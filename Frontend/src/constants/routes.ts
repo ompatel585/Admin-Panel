@@ -9,6 +9,7 @@ export const ROUTES = {
   crawlJobs: "/crawl-jobs",
   tenants: "/tenants",
   settings: "/settings",
+  profile: "/profile",
   users: "/users",
   roles: "/roles",
   permissions: "/permissions",

@@ -1,11 +1,11 @@
 "use client";
 
-import { KeyRound } from "lucide-react";
+import { KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
+import { RowActions } from "@/components/shared/row-actions";
 import { PageSpinner } from "@/components/shared/page-spinner";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { PermissionNode } from "@/types/permission";
 
@@ -31,23 +31,14 @@ export function PermissionsTree({ tree, loading, canCreate, canUpdate, canDelete
   }
 
   const actions = (node: PermissionNode, isModule: boolean) => (
-    <div className="flex shrink-0 items-center">
-      {isModule && canCreate && (
-        <Button variant="ghost" size="sm" onClick={() => onAddSub(node)}>
-          Add
-        </Button>
-      )}
-      {canUpdate && (
-        <Button variant="ghost" size="sm" onClick={() => onEdit(node)}>
-          Edit
-        </Button>
-      )}
-      {canDelete && !node.isSystem && (
-        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => onDelete(node)}>
-          Delete
-        </Button>
-      )}
-    </div>
+    <RowActions
+      subject={node.key}
+      actions={[
+        { label: "Add sub-permission", icon: Plus, tone: "success", hidden: !isModule || !canCreate, onClick: () => onAddSub(node) },
+        { label: "Edit", icon: Pencil, tone: "primary", hidden: !canUpdate, onClick: () => onEdit(node) },
+        { label: "Delete", icon: Trash2, tone: "danger", hidden: !canDelete || node.isSystem, onClick: () => onDelete(node) },
+      ]}
+    />
   );
 
   return (

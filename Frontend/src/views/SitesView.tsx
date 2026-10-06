@@ -1,19 +1,15 @@
 "use client";
 
-import { Globe, MoreHorizontal, Plus, RefreshCw } from "lucide-react";
+import { Globe, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Can } from "@/components/guards/Can";
 import { RequirePermission } from "@/components/guards/RequirePermission";
-import { DataPagination } from "@/components/shared/data-pagination";
-import { EmptyState } from "@/components/shared/empty-state";
+import { DataTableCard } from "@/components/shared/data-table-card";
+import { RowActions } from "@/components/shared/row-actions";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { TenantFilter } from "@/components/shared/tenant-filter";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -56,29 +52,18 @@ export function SitesView() {
 
   return (
     <RequirePermission permission={PERMISSIONS.sites.read}>
-      <PageHeader
-        title="Websites"
-        description="Websites that are crawled, chunked and embedded for your knowledge base."
-        actions={
-          <Can permission={PERMISSIONS.sites.create}>
-            <Button onClick={() => setModal({ type: "add" })}>
-              <Plus /> Add website
-            </Button>
-          </Can>
-        }
-      />
+      <PageHeader title="Websites" description="Websites that are crawled, chunked and embedded for your knowledge base." />
 
-      <Card className="gap-0 py-0">
-        <div className="flex flex-wrap items-center gap-2 border-b p-3">
-          <Input
-            className="max-w-xs"
-            placeholder="Search name or address…"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-          />
+      <DataTableCard
+        search={{
+          value: search,
+          placeholder: "Search name or address",
+          onChange: (value) => {
+            setSearch(value);
+            setPage(1);
+          },
+        }}
+        filters={
           <TenantFilter
             value={tenantId}
             onChange={(next) => {
@@ -86,15 +71,23 @@ export function SitesView() {
               setPage(1);
             }}
           />
-        </div>
-
-        {data && data.items.length === 0 ? (
-          <EmptyState
-            icon={Globe}
-            title={debouncedSearch || tenantId ? "No websites match" : "No websites yet"}
-            description={debouncedSearch || tenantId ? "Try a different search." : "Add your first website to build a knowledge base."}
-          />
-        ) : (
+        }
+        action={
+          can(PERMISSIONS.sites.create) && (
+            <Button onClick={() => setModal({ type: "add" })}>
+              <Plus /> Add website
+            </Button>
+          )
+        }
+        isEmpty={data?.items.length === 0}
+        empty={{
+          icon: Globe,
+          title: debouncedSearch || tenantId ? "No websites match" : "No websites yet",
+          description: debouncedSearch || tenantId ? "Try a different search." : "Add your first website to build a knowledge base.",
+        }}
+        meta={data?.meta}
+        onPageChange={setPage}
+      >
           <Table className={isFetching && !data ? "opacity-60" : undefined}>
             <TableHeader>
               <TableRow>
@@ -104,7 +97,7 @@ export function SitesView() {
                 <TableHead className="text-right">Pages</TableHead>
                 <TableHead className="text-right">Chunks</TableHead>
                 <TableHead>Last crawled</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -139,37 +132,38 @@ export function SitesView() {
                     {site.stats.lastCrawledAt ? formatDateTime(site.stats.lastCrawledAt) : "Never"}
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${site.name}`} />}>
-                        <MoreHorizontal />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {can(PERMISSIONS.sites.crawl) && (
-                          <DropdownMenuItem
-                            disabled={Boolean(site.activeJob)}
-                            onClick={() => void succeeded(crawlSite(site.id).unwrap())}
-                          >
-                            <RefreshCw /> Re-crawl now
-                          </DropdownMenuItem>
-                        )}
-                        {can(PERMISSIONS.sites.update) && (
-                          <DropdownMenuItem onClick={() => setModal({ type: "edit", site })}>Edit</DropdownMenuItem>
-                        )}
-                        {can(PERMISSIONS.sites.delete) && (
-                          <DropdownMenuItem variant="destructive" onClick={() => setToDelete(site)}>
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <RowActions
+                      subject={site.name}
+                      actions={[
+                        {
+                          label: "Edit",
+                          icon: Pencil,
+                          tone: "primary",
+                          hidden: !can(PERMISSIONS.sites.update),
+                          onClick: () => setModal({ type: "edit", site }),
+                        },
+                        {
+                          label: site.activeJob ? "Crawl in progress" : "Re-crawl now",
+                          icon: RefreshCw,
+                          hidden: !can(PERMISSIONS.sites.crawl),
+                          disabled: Boolean(site.activeJob),
+                          onClick: () => void succeeded(crawlSite(site.id).unwrap()),
+                        },
+                        {
+                          label: "Delete",
+                          icon: Trash2,
+                          tone: "danger",
+                          hidden: !can(PERMISSIONS.sites.delete),
+                          onClick: () => setToDelete(site),
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        )}
-        {data && <DataPagination meta={data.meta} onPageChange={setPage} />}
-      </Card>
+      </DataTableCard>
 
       {modal && <SiteFormDialog site={modal.type === "edit" ? modal.site : null} onClose={() => setModal(null)} />}
 

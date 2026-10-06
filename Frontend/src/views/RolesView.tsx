@@ -1,24 +1,20 @@
 "use client";
 
-import { Pencil, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { RequirePermission } from "@/components/guards/RequirePermission";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { DataPagination } from "@/components/shared/data-pagination";
-import { EmptyState } from "@/components/shared/empty-state";
+import { DataTableCard } from "@/components/shared/data-table-card";
+import { RowActions } from "@/components/shared/row-actions";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PERMISSIONS } from "@/constants/permissions";
 import { ROUTES } from "@/constants/routes";
 import { PAGE_SIZE, SEARCH_DEBOUNCE_MS } from "@/constants/ui";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePermissions } from "@/hooks/usePermissions";
-import { cn } from "@/lib/utils";
 import { RoleFormDialog } from "@/sections/roles/role-form-dialog";
 import { useDeleteRoleMutation, useGetRolesQuery } from "@/services/api";
 import type { Role } from "@/types/role";
@@ -45,30 +41,27 @@ export function RolesView() {
     <RequirePermission permission={PERMISSIONS.roles.read}>
       <PageHeader title="Roles" description="What each role is allowed to do. Open a role's shield to choose its permissions." />
 
-      <Card className="gap-0 py-0">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3">
-          <div className="relative w-full max-w-xs">
-            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-8"
-              placeholder="Search by name"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          {isAdmin && (
+      <DataTableCard
+        search={{
+          value: search,
+          placeholder: "Search by name",
+          onChange: (value) => {
+            setSearch(value);
+            setPage(1);
+          },
+        }}
+        action={
+          isAdmin && (
             <Button onClick={() => setModal({ type: "create" })}>
               <Plus /> Add role
             </Button>
-          )}
-        </div>
-
-        {data && data.items.length === 0 ? (
-          <EmptyState icon={ShieldCheck} title="No roles found" />
-        ) : (
+          )
+        }
+        isEmpty={data?.items.length === 0}
+        empty={{ icon: ShieldCheck, title: "No roles found" }}
+        meta={data?.meta}
+        onPageChange={setPage}
+      >
           <Table>
             <TableHeader>
               <TableRow>
@@ -90,35 +83,37 @@ export function RolesView() {
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">{role.permissions.length}</TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1">
-                      {isAdmin && (
-                        <Button variant="ghost" size="icon-sm" className="text-primary" aria-label={`Edit ${role.name}`} onClick={() => setModal({ type: "edit", role })}>
-                          <Pencil />
-                        </Button>
-                      )}
-                      {can(PERMISSIONS.roles.update) && !role.isAdmin && (
-                        <Link
-                          href={`${ROUTES.roles}/${role.id}/permissions`}
-                          aria-label={`Permissions for ${role.name}`}
-                          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-                        >
-                          <ShieldCheck />
-                        </Link>
-                      )}
-                      {isAdmin && !role.isSystem && (
-                        <Button variant="ghost" size="icon-sm" className="text-destructive" aria-label={`Delete ${role.name}`} onClick={() => setToDelete(role)}>
-                          <Trash2 />
-                        </Button>
-                      )}
-                    </div>
+                    <RowActions
+                      subject={role.name}
+                      actions={[
+                        {
+                          label: "Edit",
+                          icon: Pencil,
+                          tone: "primary",
+                          hidden: !isAdmin,
+                          onClick: () => setModal({ type: "edit", role }),
+                        },
+                        {
+                          label: "Permissions",
+                          icon: ShieldCheck,
+                          hidden: !can(PERMISSIONS.roles.update) || role.isAdmin,
+                          href: `${ROUTES.roles}/${role.id}/permissions`,
+                        },
+                        {
+                          label: "Delete",
+                          icon: Trash2,
+                          tone: "danger",
+                          hidden: !isAdmin || role.isSystem,
+                          onClick: () => setToDelete(role),
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        )}
-        {data && <DataPagination meta={data.meta} onPageChange={setPage} />}
-      </Card>
+      </DataTableCard>
 
       {modal && <RoleFormDialog role={modal.type === "edit" ? modal.role : null} onClose={() => setModal(null)} />}
 

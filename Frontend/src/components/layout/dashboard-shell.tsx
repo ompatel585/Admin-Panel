@@ -1,9 +1,10 @@
 "use client";
 
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ROUTES } from "@/constants/routes";
@@ -30,13 +31,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       // Already reported by the feedback middleware; stay signed in.
     }
   };
-
-  const initials = (user?.name ?? "?")
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -69,26 +63,32 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <div className="ml-auto flex items-center gap-1">
             <ThemeToggle />
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="ghost" className="h-9 gap-2 px-2" aria-label="Account menu" />}>
-                <span className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-                  {initials}
-                </span>
-                <span className="hidden text-left text-sm leading-tight sm:block">
-                  <span className="block font-medium">{user?.name}</span>
-                  <span className="block text-xs text-muted-foreground">{user?.role?.name ?? "No role"}</span>
-                </span>
+              <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full" aria-label="Account menu" />}>
+                <UserAvatar name={user?.name} />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">{user?.email}</div>
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut /> Sign out
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-72 p-0">
+                <div className="flex items-center gap-3 border-b p-4">
+                  <UserAvatar name={user?.name} size="lg" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{user?.name}</p>
+                    <p className="truncate text-sm text-muted-foreground">{user?.email}</p>
+                    <p className="text-sm text-muted-foreground">{user?.role?.name ?? "No role"}</p>
+                  </div>
+                </div>
+                <div className="p-1">
+                  <DropdownMenuItem className="gap-3 px-3 py-2" onClick={() => router.push(ROUTES.profile)}>
+                    <Pencil /> Edit profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="gap-3 px-3 py-2" onClick={handleLogout}>
+                    <LogOut /> Logout
+                  </DropdownMenuItem>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl p-4 sm:p-6">{children}</main>
+        <main className="w-full p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Patch,
   HttpStatus,
   Post,
   Res,
@@ -18,6 +19,7 @@ import { Public } from './decorators/public.decorator.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { ForgotPasswordDto } from './dto/forgot-password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import { SignupDto } from './dto/signup.dto.js';
 import { NormalizeEmailPipe } from './pipes/normalize-email.pipe.js';
@@ -66,6 +68,16 @@ export class AuthController {
   @ResponseMessage(AUTH_MESSAGES.PROFILE)
   me(@CurrentUser() user: AuthUser) {
     return user;
+  }
+
+  /** Any signed-in person may edit their own name and email; no `users.*` permission needed. */
+  @Patch('me')
+  @ResponseMessage(AUTH_MESSAGES.PROFILE_UPDATED)
+  updateMe(
+    @CurrentUser() user: AuthUser,
+    @Body(NormalizeEmailPipe) dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(user.id, dto);
   }
 
   @Public()

@@ -14,11 +14,12 @@ import type {
   TenantStatus,
 } from '../tenants/constants/tenants.constants.js';
 import { TenantsService } from '../tenants/tenants.service.js';
-import { HIDDEN_ROLE_LABEL } from '../roles/constants/roles.constants.js';
+import { SUPER_ADMIN_LABEL } from '../roles/constants/roles.constants.js';
 import { RolesRepository } from '../roles/roles.repository.js';
 import type { UserDocument } from '../users/schemas/user.schema.js';
 import { UsersRepository } from '../users/users.repository.js';
 import { AUTH_ERRORS } from './constants/auth.constants.js';
+import type { UpdateProfileDto } from './dto/update-profile.dto.js';
 import type { ChangePasswordDto } from './dto/change-password.dto.js';
 import type { ForgotPasswordDto } from './dto/forgot-password.dto.js';
 import type { LoginDto } from './dto/login.dto.js';
@@ -136,6 +137,17 @@ export class AuthService {
     );
   }
 
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<AuthUser> {
+    if (dto.email) {
+      const owner = await this.usersRepository.findByEmail(dto.email);
+      if (owner && String(owner._id) !== userId) {
+        throw new AppException(AUTH_ERRORS.EMAIL_TAKEN);
+      }
+    }
+    await this.usersRepository.updateById(userId, { $set: dto });
+    return this.getProfile(userId);
+  }
+
   /** Resolves a verified token to the caller, with permissions read fresh from the DB. */
   async resolveAuthUser(token: string): Promise<AuthUser> {
     let payload: JwtPayload;
@@ -205,7 +217,8 @@ export class AuthService {
       role: role
         ? {
             id: String(role._id),
-            name: role.isHidden ? HIDDEN_ROLE_LABEL : role.name,
+            // `/auth/me` only ever describes the caller, so the super admin may see their own role.
+            name: role.isHidden ? SUPER_ADMIN_LABEL : role.name,
             isAdmin: Boolean(effective?.isAdmin),
           }
         : null,

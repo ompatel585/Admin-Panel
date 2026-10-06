@@ -17,5 +17,6 @@ export const authMessages = defineMessages({
     forgotPassword: "If that email is registered, a reset link is on its way.",
     resetPassword: "Password updated. You can sign in now.",
     changePassword: "Password changed.",
+    updateProfile: "Profile updated.",
   },
 });

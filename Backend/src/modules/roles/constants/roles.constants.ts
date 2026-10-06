@@ -1,8 +1,8 @@
 import { HttpStatus } from '@nestjs/common';
 import { defineErrors } from '../../../common/exceptions/app.exception.js';
 
-/** What a hidden role is called wherever it would otherwise be named. */
-export const HIDDEN_ROLE_LABEL = 'Restricted';
+/** What the super admin sees as their own role (only ever shown to themselves). */
+export const SUPER_ADMIN_LABEL = 'Super Admin';
 
 export const ROLE_ERRORS = defineErrors({
   NOT_FOUND: {

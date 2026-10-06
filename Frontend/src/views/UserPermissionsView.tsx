@@ -52,6 +52,11 @@ function Editor({ user, role, tree }: { user: UserDetail; role: Role; tree: Perm
           <div>
             <p className="text-lg font-semibold">{user.name}</p>
             <p className="text-sm text-muted-foreground">{user.email}</p>
+            {user.tenant && (
+              <p className="text-sm text-muted-foreground">
+                {user.tenant.name} <span className="font-mono text-xs">({user.tenant.id})</span>
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{role.name}</Badge>

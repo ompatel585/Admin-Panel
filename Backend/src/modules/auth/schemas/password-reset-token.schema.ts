@@ -24,4 +24,6 @@ export class PasswordResetToken {
 export type PasswordResetTokenDocument = HydratedDocument<PasswordResetToken>;
 export const PasswordResetTokenSchema = applyBaseSchemaOptions(
   SchemaFactory.createForClass(PasswordResetToken),
+  // Single-use tokens are throwaway rows, not records worth keeping.
+  { softDelete: false },
 );

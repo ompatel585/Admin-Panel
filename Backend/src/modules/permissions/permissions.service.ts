@@ -145,6 +145,6 @@ export class PermissionsService {
     if (await this.repository.isAssignedToRole(id)) {
       throw new AppException(PERMISSION_ERRORS.IN_USE);
     }
-    await this.repository.deleteById(id);
+    await this.repository.softDeleteById(id);
   }
 }

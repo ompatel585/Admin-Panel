@@ -126,7 +126,7 @@ export class RolesService {
     if (await this.repository.hasUsers(id)) {
       throw new AppException(ROLE_ERRORS.IN_USE);
     }
-    await this.repository.deleteById(id);
+    await this.repository.softDeleteById(id);
   }
 
   /** Creating, renaming and deleting roles is reserved for the super admin, whatever permissions another role is given. */

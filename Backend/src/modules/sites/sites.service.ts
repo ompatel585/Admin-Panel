@@ -165,8 +165,8 @@ export class SitesService {
 
   async remove(user: AuthUser, id: string): Promise<void> {
     const site = await this.getAccessible(user, id);
-    await this.repository.deleteJobs(site._id);
-    await this.repository.deleteById(id);
+    await this.repository.softDeleteJobs(site._id);
+    await this.repository.softDeleteById(id);
   }
 
   /** Loads a site the caller may see; another tenant's site is a plain 404. */

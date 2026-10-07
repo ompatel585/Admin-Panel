@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import type { AppConfig } from '../config/configuration.js';
+import { LegacyIndexCleanupService } from './legacy-index-cleanup.service.js';
 
 @Module({
   imports: [
@@ -12,5 +13,6 @@ import type { AppConfig } from '../config/configuration.js';
       }),
     }),
   ],
+  providers: [LegacyIndexCleanupService],
 })
 export class DatabaseModule {}

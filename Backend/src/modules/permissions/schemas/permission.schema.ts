@@ -8,7 +8,7 @@ export class Permission {
   name: string;
 
   /** Globally unique, e.g. `users` (module) or `users.create` (sub). */
-  @Prop({ required: true, unique: true, trim: true, lowercase: true })
+  @Prop({ required: true, trim: true, lowercase: true })
   key: string;
 
   @Prop({ trim: true, default: '' })
@@ -34,3 +34,4 @@ export type PermissionDocument = HydratedDocument<Permission>;
 export const PermissionSchema = applyBaseSchemaOptions(
   SchemaFactory.createForClass(Permission),
 );
+PermissionSchema.index({ key: 1, deletedAt: 1 }, { unique: true });

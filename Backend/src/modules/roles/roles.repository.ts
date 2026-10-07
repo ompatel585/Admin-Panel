@@ -38,7 +38,10 @@ export class RolesRepository extends BaseRepository<Role> {
   async hasUsers(roleId: string): Promise<boolean> {
     const holder = await this.model.db
       .collection('users')
-      .findOne({ role: new Types.ObjectId(roleId) }, { projection: { _id: 1 } });
+      .findOne(
+        { role: new Types.ObjectId(roleId), deletedAt: null },
+        { projection: { _id: 1 } },
+      );
     return holder !== null;
   }
 
@@ -57,11 +60,11 @@ export class RolesRepository extends BaseRepository<Role> {
     const users = this.model.db.collection('users');
 
     const legacy = await roles
-      .find({ isSuperAdmin: true, isAdmin: { $ne: true } })
+      .find({ isSuperAdmin: true, isAdmin: { $ne: true }, deletedAt: null })
       .toArray();
     if (legacy.length === 0) return 0;
 
-    let admin = await roles.findOne({ isAdmin: true });
+    let admin = await roles.findOne({ isAdmin: true, deletedAt: null });
     let obsolete = legacy;
     if (!admin) {
       const [first, ...rest] = legacy;
@@ -79,7 +82,10 @@ export class RolesRepository extends BaseRepository<Role> {
     const ids = obsolete.map((role) => role._id);
     if (ids.length > 0) {
       await users.updateMany({ role: { $in: ids } }, { $set: { role: admin._id } });
-      await roles.deleteMany({ _id: { $in: ids } });
+      await roles.updateMany(
+        { _id: { $in: ids } },
+        { $set: { deletedAt: new Date() } },
+      );
     }
     return legacy.length;
   }

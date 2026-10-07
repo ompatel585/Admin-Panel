@@ -76,4 +76,4 @@ export type SiteDocument = HydratedDocument<Site>;
 export const SiteSchema = applyBaseSchemaOptions(
   SchemaFactory.createForClass(Site),
 );
-SiteSchema.index({ tenant: 1, url: 1 }, { unique: true });
+SiteSchema.index({ tenant: 1, url: 1, deletedAt: 1 }, { unique: true });

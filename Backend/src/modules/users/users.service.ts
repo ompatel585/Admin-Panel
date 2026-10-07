@@ -148,7 +148,7 @@ export class UsersService {
 
   async remove(actor: AuthUser, id: string): Promise<void> {
     await this.load(actor, id);
-    await this.repository.deleteById(id);
+    await this.repository.softDeleteById(id);
   }
 
   /** Loads a user the actor may see. Hidden-role holders do not exist as far as callers can tell. */

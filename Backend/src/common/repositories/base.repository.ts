@@ -77,8 +77,22 @@ export abstract class BaseRepository<T> {
     return populate ? query.populate(populate) : query;
   }
 
-  deleteById(id: string | Types.ObjectId) {
-    return this.model.findByIdAndDelete(id);
+  /**
+   * Soft delete: stamps `deletedAt`, after which the document disappears from
+   * every query (see `database/soft-delete.plugin.ts`). Returns the document,
+   * or null if it was missing or already deleted.
+   */
+  softDeleteById(id: string | Types.ObjectId) {
+    return this.model.findByIdAndUpdate(
+      id,
+      { $set: { deletedAt: new Date() } },
+      { returnDocument: 'after' },
+    );
+  }
+
+  /** Soft-deletes every live document matching the filter; `at` lets a cascade share one timestamp. */
+  softDeleteMany(filter: QueryFilter<T>, at: Date = new Date()) {
+    return this.model.updateMany(filter, { $set: { deletedAt: at } });
   }
 
   count(filter: QueryFilter<T> = {}): Promise<number> {

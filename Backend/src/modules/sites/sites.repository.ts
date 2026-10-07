@@ -9,7 +9,7 @@ import { Site } from './schemas/site.schema.js';
 export class SitesRepository extends BaseRepository<Site> {
   constructor(
     @InjectModel(Site.name) siteModel: Model<Site>,
-    // Written only to remove a website's job history along with it.
+    // Written only to soft-delete a website's job history along with it.
     @InjectModel(CrawlJob.name) private readonly jobModel: Model<CrawlJob>,
   ) {
     super(siteModel);
@@ -23,7 +23,10 @@ export class SitesRepository extends BaseRepository<Site> {
     return this.count({ tenant });
   }
 
-  deleteJobs(site: string | Types.ObjectId) {
-    return this.jobModel.deleteMany({ site });
+  softDeleteJobs(site: string | Types.ObjectId) {
+    return this.jobModel.updateMany(
+      { site },
+      { $set: { deletedAt: new Date() } },
+    );
   }
 }

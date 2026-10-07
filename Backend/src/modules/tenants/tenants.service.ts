@@ -106,8 +106,8 @@ export class TenantsService {
 
   async remove(id: string): Promise<void> {
     await this.getOrFail(id);
-    await this.repository.deleteOwnedData(id);
-    await this.repository.deleteById(id);
+    await this.repository.softDeleteOwnedData(id);
+    await this.repository.softDeleteById(id);
   }
 
   async getOrFail(id: string): Promise<TenantDocument> {

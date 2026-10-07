@@ -18,7 +18,7 @@ interface CountRow {
 export class TenantsRepository extends BaseRepository<Tenant> {
   constructor(
     @InjectModel(Tenant.name) tenantModel: Model<Tenant>,
-    // The tenant owns these collections: read for usage, written only to cascade a delete.
+    // The tenant owns these collections: read for usage, written only to cascade a soft delete.
     @InjectModel(Site.name) private readonly siteModel: Model<Site>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(CrawlJob.name) private readonly jobModel: Model<CrawlJob>,
@@ -70,12 +70,19 @@ export class TenantsRepository extends BaseRepository<Tenant> {
     return usage;
   }
 
-  /** Removes everything a tenant owns. The tenant document itself is deleted by the caller. */
-  async deleteOwnedData(id: Types.ObjectId | string): Promise<void> {
-    await Promise.all([
-      this.jobModel.deleteMany({ tenant: id }),
-      this.siteModel.deleteMany({ tenant: id }),
-      this.userModel.deleteMany({ tenant: id }),
-    ]);
+  /**
+   * Soft-deletes everything a tenant owns with one shared timestamp. The tenant
+   * itself is soft-deleted by the caller.
+   */
+  async softDeleteOwnedData(id: Types.ObjectId | string): Promise<void> {
+    const at = new Date();
+    await Promise.all(
+      [this.jobModel, this.siteModel, this.userModel].map((model) =>
+        (model as Model<unknown>).updateMany(
+          { tenant: id },
+          { $set: { deletedAt: at } },
+        ),
+      ),
+    );
   }
 }

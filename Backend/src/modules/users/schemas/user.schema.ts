@@ -7,7 +7,7 @@ export class User {
   @Prop({ required: true, trim: true })
   name: string;
 
-  @Prop({ required: true, unique: true, trim: true, lowercase: true })
+  @Prop({ required: true, trim: true, lowercase: true })
   email: string;
 
   /** Never selected by default; opt in with `.select('+passwordHash')`. */
@@ -52,3 +52,5 @@ export type UserDocument = HydratedDocument<User>;
 export const UserSchema = applyBaseSchemaOptions(
   SchemaFactory.createForClass(User),
 );
+// Unique among live users; a soft-deleted user's email can be registered again.
+UserSchema.index({ email: 1, deletedAt: 1 }, { unique: true });

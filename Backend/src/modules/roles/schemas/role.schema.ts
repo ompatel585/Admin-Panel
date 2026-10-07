@@ -4,7 +4,7 @@ import { applyBaseSchemaOptions } from '../../../database/schema.options.js';
 
 @Schema({ timestamps: true })
 export class Role {
-  @Prop({ required: true, unique: true, trim: true })
+  @Prop({ required: true, trim: true })
   name: string;
 
   @Prop({ trim: true, default: '' })
@@ -42,3 +42,4 @@ export type RoleDocument = HydratedDocument<Role>;
 export const RoleSchema = applyBaseSchemaOptions(
   SchemaFactory.createForClass(Role),
 );
+RoleSchema.index({ name: 1, deletedAt: 1 }, { unique: true });

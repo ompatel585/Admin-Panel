@@ -55,6 +55,25 @@ Non-Admin callers are pinned to their own workspace in the service layer
 Plans (`free`, `pro`, `enterprise`) cap websites and pages per website
 (`tenants.constants.ts`). A suspended workspace cannot sign in or use existing sessions.
 
+## Soft delete
+
+Deleting users, roles, permissions, workspaces, websites and crawl jobs never removes the
+row: it stamps `deletedAt` with the time. A document with `deletedAt` set is deleted;
+live ones have `deletedAt: null` (or no field, for rows written before this existed).
+
+- A Mongoose plugin (`Backend/src/database/soft-delete.plugin.ts`) hides deleted rows from
+  every query, populate and aggregate on those models, so a screen or endpoint cannot leak
+  one by forgetting a filter. To read them on purpose, pass `{ withDeleted: true }` in the
+  query options or name `deletedAt` in the filter.
+- Repositories delete through `softDeleteById` / `softDeleteMany`.
+- Deleting a workspace soft-deletes its users, websites and crawl jobs with the same
+  timestamp. Deleted users can't sign in and their open sessions stop working.
+- Uniqueness (email, role name, permission key, workspace slug, website URL per workspace)
+  is enforced together with `deletedAt`, so a deleted value can be used again. Old
+  single-field unique indexes are dropped automatically on first boot.
+- Password-reset tokens are throwaway and are still hard-deleted.
+- Code that reads a raw collection (`connection.collection(...)`) bypasses the plugin and
+  must filter `deletedAt: null` itself.
 ## Pipeline API
 
 Your crawler talks to the panel with a shared secret in the

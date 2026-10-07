@@ -28,8 +28,8 @@ export class PermissionsRepository extends BaseRepository<Permission> {
   }
 
   /**
-   * Deletes the given modules and their sub-permissions and revokes them from
-   * every role. Returns how many permissions were removed.
+   * Soft-deletes the given modules and their sub-permissions and revokes them from
+   * every role. Returns how many permissions were retired.
    */
   async retireModules(moduleKeys: string[]): Promise<number> {
     const doomed = await this.find({
@@ -44,7 +44,7 @@ export class PermissionsRepository extends BaseRepository<Permission> {
 
     const ids = doomed.map((permission) => permission._id);
     await this.roleModel.updateMany({}, { $pull: { permissions: { $in: ids } } });
-    await this.model.deleteMany({ _id: { $in: ids } });
+    await this.softDeleteMany({ _id: { $in: ids } });
     return ids.length;
   }
 

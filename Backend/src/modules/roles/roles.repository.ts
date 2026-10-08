@@ -18,6 +18,11 @@ export class RolesRepository extends BaseRepository<Role> {
     });
   }
 
+  /** Built-in roles only (those with no owning workspace). */
+  findByKey(key: string) {
+    return this.findOne({ key, tenant: null });
+  }
+
   findDefault() {
     return this.findOne({ isDefault: true });
   }

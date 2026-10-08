@@ -14,6 +14,13 @@ import { RolesRepository } from './roles.repository.js';
 import type { Role, RoleDocument } from './schemas/role.schema.js';
 import type { RoleOption } from './types/role.type.js';
 
+/** `Support Lead` -> `support_lead` */
+const toKey = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'role';
+
 const PERMISSIONS_POPULATE = {
   path: 'permissions',
   select: 'name key parent isActive',
@@ -35,6 +42,7 @@ export class RolesService {
 
     const role = await this.repository.create({
       name: dto.name,
+      key: await this.uniqueKey(dto.name),
       description: dto.description ?? '',
       isActive: dto.isActive ?? true,
     });
@@ -132,6 +140,12 @@ export class RolesService {
   /** Creating, renaming and deleting roles is reserved for the super admin, whatever permissions another role is given. */
   private assertSuperAdmin(actor: AuthUser): void {
     if (!isAdmin(actor)) throw new AppException(ROLE_ERRORS.SUPER_ADMIN_ONLY);
+  }
+
+  private async uniqueKey(name: string): Promise<string> {
+    const base = toKey(name);
+    if (!(await this.repository.findByKey(base))) return base;
+    return `${base}_${Date.now().toString(36)}`;
   }
 
   private async assertNameAvailable(name: string): Promise<void> {

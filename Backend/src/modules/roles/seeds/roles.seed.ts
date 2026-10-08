@@ -1,6 +1,10 @@
+import type { RoleScope } from '../schemas/role.schema.js';
 import { PERMISSION_KEYS as K } from '../../permissions/constants/permissions.constants.js';
 
 export interface RoleSeed {
+  /** Stable identifier; the backfill also uses it to find roles created before keys existed. */
+  key: string;
+  scope: RoleScope;
   name: string;
   description: string;
   isAdmin: boolean;
@@ -17,6 +21,8 @@ export interface RoleSeed {
 /** The platform has exactly these two roles. */
 export const ROLE_SEEDS: RoleSeed[] = [
   {
+    key: 'super_admin',
+    scope: 'platform',
     name: 'Admin',
     description:
       'Platform operator: manages every workspace and holds all permissions, including ones added later',
@@ -26,6 +32,8 @@ export const ROLE_SEEDS: RoleSeed[] = [
     permissions: [],
   },
   {
+    key: 'owner',
+    scope: 'company',
     name: 'User',
     description:
       'Workspace owner: manages their own websites and crawls',

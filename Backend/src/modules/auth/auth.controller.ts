@@ -99,11 +99,15 @@ export class AuthController {
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(AUTH_MESSAGES.PASSWORD_CHANGED)
-  changePassword(
+  async changePassword(
     @CurrentUser() user: AuthUser,
     @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.changePassword(user.id, dto);
+    return this.respondWithSession(
+      res,
+      await this.authService.changePassword(user.id, dto),
+    );
   }
 
   private respondWithSession(

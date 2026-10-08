@@ -4,16 +4,26 @@ export interface PermissionSeed {
   key: string;
   name: string;
   description: string;
+  /** Overrides the module's scope for this one key. */
+  scope?: 'platform' | 'company';
 }
 
 export interface PermissionModuleSeed extends PermissionSeed {
+  /** Defaults to `company`. */
+  scope?: 'platform' | 'company';
   children: PermissionSeed[];
 }
 
-const sub = (key: string, name: string, description: string) => ({
+const sub = (
+  key: string,
+  name: string,
+  description: string,
+  scope?: 'platform' | 'company',
+) => ({
   key,
   name,
   description,
+  ...(scope && { scope }),
 });
 
 /**
@@ -29,11 +39,11 @@ export const PERMISSION_SEEDS: PermissionModuleSeed[] = [
     description: 'Tenant workspaces on the platform',
     children: [
       sub(K.TENANTS.READ, 'View workspace', 'View your own workspace'),
-      sub(K.TENANTS.LIST, 'List workspaces', 'See every workspace on the platform'),
-      sub(K.TENANTS.CREATE, 'Create workspaces', 'Create a workspace for a customer'),
+      sub(K.TENANTS.LIST, 'List workspaces', 'See every workspace on the platform', 'platform'),
+      sub(K.TENANTS.CREATE, 'Create workspaces', 'Create a workspace for a customer', 'platform'),
       sub(K.TENANTS.UPDATE, 'Edit workspace', 'Edit workspace name and plan'),
-      sub(K.TENANTS.SUSPEND, 'Suspend workspaces', 'Suspend or reactivate a workspace'),
-      sub(K.TENANTS.DELETE, 'Delete workspaces', 'Delete a workspace and all of its data'),
+      sub(K.TENANTS.SUSPEND, 'Suspend workspaces', 'Suspend or reactivate a workspace', 'platform'),
+      sub(K.TENANTS.DELETE, 'Delete workspaces', 'Delete a workspace and all of its data', 'platform'),
     ],
   },
   {

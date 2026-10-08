@@ -62,9 +62,24 @@ export class CrawlJob {
 
   @Prop({ type: Date, default: null })
   finishedAt: Date | null;
+
+  /** Last sign of life from the pipeline; lets a job whose worker died be spotted. */
+  @Prop({ type: Date, default: null })
+  heartbeatAt: Date | null;
+
+  /**
+   * Set when the job ends (finish + `JOB_RETENTION_DAYS`). MongoDB then removes
+   * it for good: job history is retention data, not a record to soft-delete.
+   * Null while the job is active, which a TTL index ignores.
+   */
+  @Prop({ type: Date, default: null, expires: 0 })
+  expireAt: Date | null;
 }
 
 export type CrawlJobDocument = HydratedDocument<CrawlJob>;
 export const CrawlJobSchema = applyBaseSchemaOptions(
   SchemaFactory.createForClass(CrawlJob),
 );
+CrawlJobSchema.index({ status: 1, createdAt: 1 }); // claiming the oldest queued job
+CrawlJobSchema.index({ site: 1, status: 1 }); // "does this site have an active job?"
+CrawlJobSchema.index({ tenant: 1, createdAt: -1 }); // a workspace's job list

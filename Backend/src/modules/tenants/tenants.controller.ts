@@ -67,8 +67,8 @@ export class TenantsController {
   @Post()
   @RequirePermissions(CREATE)
   @ResponseMessage(TENANT_MESSAGES.CREATED)
-  create(@Body() dto: CreateTenantDto) {
-    return this.tenantsService.create(dto);
+  create(@CurrentUser() user: AuthUser, @Body() dto: CreateTenantDto) {
+    return this.tenantsService.create(dto, { createdBy: user.id });
   }
 
   @Patch(':id')

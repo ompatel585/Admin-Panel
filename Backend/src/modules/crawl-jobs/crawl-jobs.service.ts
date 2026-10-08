@@ -16,6 +16,7 @@ import type { AuthUser } from '../auth/types/auth.type.js';
 import {
   ACTIVE_JOB_STATUSES,
   JOB_ERRORS,
+  JOB_RETENTION_DAYS,
   type JobStage,
 } from './constants/crawl-jobs.constants.js';
 import { CrawlJobsRepository } from './crawl-jobs.repository.js';
@@ -28,6 +29,11 @@ const POPULATE = [
   { path: 'tenant', select: 'name slug' },
 ];
 const SCHEDULER_INTERVAL_MS = 5 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** When MongoDB should remove a job that has just ended. */
+const expiryFrom = (finishedAt: Date) =>
+  new Date(finishedAt.getTime() + JOB_RETENTION_DAYS * DAY_MS);
+
 const INDEXING_STAGES: JobStage[] = ['chunking', 'embedding'];
 
 @Injectable()
@@ -78,9 +84,10 @@ export class CrawlJobsService implements OnModuleInit, OnModuleDestroy {
       throw new AppException(JOB_ERRORS.NOT_CANCELLABLE);
     }
 
+    const now = new Date();
     const updated = await this.repository.updateById(
       id,
-      { $set: { status: 'cancelled', finishedAt: new Date() } },
+      { $set: { status: 'cancelled', finishedAt: now, expireAt: expiryFrom(now) } },
       POPULATE,
     );
     if (!updated) throw new AppException(JOB_ERRORS.NOT_FOUND);
@@ -93,13 +100,19 @@ export class CrawlJobsService implements OnModuleInit, OnModuleDestroy {
     const job = await this.repository.claimNext();
     if (!job) return null;
 
+    // Claiming is the first sign of life.
+    await this.repository.updateById(job._id, {
+      $set: { heartbeatAt: new Date() },
+    });
     const site = await this.repository.findSite(job.site);
     if (!site) {
+      const now = new Date();
       await this.repository.updateById(job._id, {
         $set: {
           status: 'failed',
           error: 'Website no longer exists',
-          finishedAt: new Date(),
+          finishedAt: now,
+          expireAt: expiryFrom(now),
         },
       });
       return null;
@@ -127,7 +140,8 @@ export class CrawlJobsService implements OnModuleInit, OnModuleDestroy {
       return { jobId: id, status: job.status };
     }
 
-    const set: Partial<CrawlJob> = {};
+    const now = new Date();
+    const set: Partial<CrawlJob> = { heartbeatAt: now };
     if (dto.stage) set.stage = dto.stage;
     if (dto.progress !== undefined) set.progress = dto.progress;
     if (dto.pagesDiscovered !== undefined) {
@@ -142,11 +156,13 @@ export class CrawlJobsService implements OnModuleInit, OnModuleDestroy {
     if (status === 'completed') {
       set.progress = 100;
       set.stage = null;
-      set.finishedAt = new Date();
+      set.finishedAt = now;
+      set.expireAt = expiryFrom(now);
     }
     if (status === 'failed') {
       set.error = dto.error ?? 'Pipeline reported a failure';
-      set.finishedAt = new Date();
+      set.finishedAt = now;
+      set.expireAt = expiryFrom(now);
     }
 
     const updated = await this.repository.updateById(id, { $set: set });

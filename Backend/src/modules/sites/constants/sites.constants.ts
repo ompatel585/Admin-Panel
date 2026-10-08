@@ -18,6 +18,47 @@ export const SITE_DEFAULTS = {
   maxDepth: 3,
 } as const;
 
+export const SITE_TOKEN_PREFIX = 'st_';
+export const SITE_SECRET_PREFIX = 'sk_';
+
+/** Starting widget settings for a new site (the doc lists the fields, not the values). */
+export const WIDGET_DEFAULTS = {
+  theme: {
+    accent: '#4f46e5',
+    accentForeground: '#ffffff',
+    surface: '#ffffff',
+    raised: '#f4f4f5',
+    foreground: '#18181b',
+    muted: '#71717a',
+    border: '#e4e4e7',
+    radius: 12,
+    font: 'system-ui',
+  },
+  copy: {
+    title: 'Ask us anything',
+    subtitle: 'Answers from our website',
+    greeting: 'Hi! How can I help you today?',
+    placeholder: 'Type your question...',
+    offlineMessage: 'We are offline right now. Please try again later.',
+    avatarText: 'AI',
+  },
+  launcher: { position: 'bottom-right', offset: 20, width: 56, height: 56 },
+  features: { streaming: true, showSources: true },
+  bot: {
+    systemPrompt:
+      'Answer using only the provided website content. If the answer is not there, say so.',
+    temperature: 0.2,
+    maxOutputTokens: 512,
+  },
+  rag: {
+    topK: 5,
+    minScore: 0.35,
+    fallbackMessage:
+      "I couldn't find that on this website. Please contact us for help.",
+  },
+  limits: { messagesPerMinute: 10, messagesPerDay: 200 },
+} as const;
+
 export const SITE_ERRORS = defineErrors({
   NOT_FOUND: {
     code: 'SITE_NOT_FOUND',

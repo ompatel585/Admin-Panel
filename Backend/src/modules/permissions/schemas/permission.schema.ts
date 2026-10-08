@@ -2,6 +2,9 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import { applyBaseSchemaOptions } from '../../../database/schema.options.js';
 
+export const PERMISSION_SCOPES = ['platform', 'company'] as const;
+export type PermissionScope = (typeof PERMISSION_SCOPES)[number];
+
 @Schema({ timestamps: true })
 export class Permission {
   @Prop({ required: true, trim: true })
@@ -13,6 +16,14 @@ export class Permission {
 
   @Prop({ trim: true, default: '' })
   description: string;
+
+  /** Who may ever hold it: your own team (`platform`) or a customer's users (`company`). */
+  @Prop({ type: String, enum: PERMISSION_SCOPES, default: 'company' })
+  scope: PermissionScope;
+
+  /** Heading the admin screens list it under: Sites, Users, Roles... */
+  @Prop({ type: String, trim: true, default: '' })
+  group: string;
 
   /** `null` for a top-level (module) permission. */
   @Prop({

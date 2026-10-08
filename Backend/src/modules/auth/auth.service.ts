@@ -18,7 +18,11 @@ import { SUPER_ADMIN_LABEL } from '../roles/constants/roles.constants.js';
 import { RolesRepository } from '../roles/roles.repository.js';
 import type { UserDocument } from '../users/schemas/user.schema.js';
 import { UsersRepository } from '../users/users.repository.js';
-import { AUTH_ERRORS } from './constants/auth.constants.js';
+import {
+  AUTH_ERRORS,
+  LOCKOUT_MINUTES,
+  MAX_FAILED_LOGINS,
+} from './constants/auth.constants.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
 import type { ChangePasswordDto } from './dto/change-password.dto.js';
 import type { ForgotPasswordDto } from './dto/forgot-password.dto.js';
@@ -60,7 +64,10 @@ export class AuthService {
 
     const tenant = isFirstUser
       ? null
-      : await this.tenantsService.create({ name: `${dto.name} workspace` });
+      : await this.tenantsService.create(
+          { name: `${dto.name} workspace` },
+          { contact: { name: dto.name, email: dto.email } },
+        );
 
     const user = await this.usersRepository.create({
       name: dto.name,
@@ -76,8 +83,18 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.usersRepository.findByEmailWithPassword(dto.email);
 
+    if (user?.lockedUntil && user.lockedUntil > new Date()) {
+      throw new AppException(AUTH_ERRORS.ACCOUNT_LOCKED);
+    }
     // Same error for "no such user" and "wrong password": no account enumeration.
     if (!user || !(await comparePassword(dto.password, user.passwordHash))) {
+      if (user) {
+        await this.usersRepository.recordFailedLogin(
+          user._id,
+          MAX_FAILED_LOGINS,
+          LOCKOUT_MINUTES,
+        );
+      }
       throw new AppException(AUTH_ERRORS.INVALID_CREDENTIALS);
     }
     if (!user.isActive) throw new AppException(AUTH_ERRORS.ACCOUNT_DISABLED);
@@ -123,7 +140,8 @@ export class AuthService {
     await this.resetTokens.deleteAllForUser(record.user);
   }
 
-  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+  /** Ends every other session; the caller gets a fresh one so they stay signed in. */
+  async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.usersRepository.findByIdWithPassword(userId);
     if (
       !user ||
@@ -135,6 +153,7 @@ export class AuthService {
       user._id,
       await hashPassword(dto.newPassword),
     );
+    return this.startSession(user);
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<AuthUser> {
@@ -160,6 +179,13 @@ export class AuthService {
     const user = await this.usersRepository.findAuthContext(payload.sub);
     if (!user) throw new AppException(AUTH_ERRORS.SESSION_INVALID);
     if (!user.isActive) throw new AppException(AUTH_ERRORS.ACCOUNT_DISABLED);
+    // A password reset or change ends every session issued before it.
+    if (
+      user.passwordChangedAt &&
+      (payload.iat ?? 0) < Math.floor(user.passwordChangedAt.getTime() / 1000)
+    ) {
+      throw new AppException(AUTH_ERRORS.SESSION_INVALID);
+    }
     const authUser = this.toAuthUser(user);
     if (authUser.tenant?.status === 'suspended') {
       throw new AppException(AUTH_ERRORS.WORKSPACE_SUSPENDED);

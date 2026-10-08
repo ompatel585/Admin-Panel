@@ -6,6 +6,8 @@ import type {
 
 export interface JwtPayload {
   sub: string;
+  /** Issued-at, in seconds; added by the JWT library. */
+  iat?: number;
 }
 
 export interface AuthUser {

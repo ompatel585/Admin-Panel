@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { QueryFilter } from 'mongoose';
+import { createHash, randomBytes } from 'node:crypto';
 import { AppException } from '../../common/exceptions/app.exception.js';
 import { escapeRegex, sortDirection } from '../../common/utils/query.util.js';
 import {
@@ -13,7 +14,12 @@ import { ACTIVE_JOB_STATUSES } from '../crawl-jobs/constants/crawl-jobs.constant
 import { CrawlJobsRepository } from '../crawl-jobs/crawl-jobs.repository.js';
 import { PLAN_LIMITS } from '../tenants/constants/tenants.constants.js';
 import { TenantsService } from '../tenants/tenants.service.js';
-import { SITE_DEFAULTS, SITE_ERRORS } from './constants/sites.constants.js';
+import {
+  SITE_DEFAULTS,
+  SITE_ERRORS,
+  SITE_SECRET_PREFIX,
+  SITE_TOKEN_PREFIX,
+} from './constants/sites.constants.js';
 import type { CrawlSettingsDto, CreateSiteDto } from './dto/create-site.dto.js';
 import type { ListSitesQueryDto } from './dto/list-sites-query.dto.js';
 import type { UpdateSiteDto } from './dto/update-site.dto.js';
@@ -46,7 +52,7 @@ export class SitesService {
   async create(user: AuthUser, dto: CreateSiteDto) {
     const tenantId = tenantForCreate(user, dto.tenantId);
     const tenant = await this.tenants.getOrFail(tenantId);
-    const limits = PLAN_LIMITS[tenant.plan];
+    const limits = tenant.limits ?? PLAN_LIMITS[tenant.plan];
 
     if ((await this.repository.countForTenant(tenantId)) >= limits.maxSites) {
       throw new AppException(SITE_ERRORS.LIMIT_REACHED);
@@ -60,18 +66,26 @@ export class SitesService {
       throw new AppException(SITE_ERRORS.URL_TAKEN);
     }
 
+    // The secret is only ever shown here; just its hash is kept.
+    const secretKey = `${SITE_SECRET_PREFIX}${randomBytes(24).toString('hex')}`;
+
     const site = await this.repository.create({
       tenant: tenantId as unknown as Site['tenant'],
       name: dto.name,
       url,
       domain,
+      publicToken: `${SITE_TOKEN_PREFIX}${randomBytes(16).toString('hex')}`,
+      secretKeyHash: createHash('sha256').update(secretKey).digest('hex'),
+      allowedOrigins: [new URL(url).origin],
       crawl: this.toCrawlSettings(
         dto.crawl,
         Math.min(SITE_DEFAULTS.maxPages, limits.maxPagesPerSite),
       ),
     });
     await this.jobs.queue(tenantId, site._id, 'initial', user.id);
-    return this.findOne(user, String(site._id));
+    return Object.assign(await this.findOne(user, String(site._id)), {
+      secretKey,
+    });
   }
 
   async findAll(user: AuthUser, query: ListSitesQueryDto) {
@@ -132,7 +146,8 @@ export class SitesService {
     if (dto.name !== undefined) changes.name = dto.name;
     if (dto.crawl) {
       const tenant = await this.tenants.getOrFail(refId(existing.tenant));
-      const maxPages = PLAN_LIMITS[tenant.plan].maxPagesPerSite;
+      const maxPages = (tenant.limits ?? PLAN_LIMITS[tenant.plan])
+        .maxPagesPerSite;
       if (dto.crawl.maxPages && dto.crawl.maxPages > maxPages) {
         throw new AppException(SITE_ERRORS.PAGE_LIMIT_EXCEEDED);
       }

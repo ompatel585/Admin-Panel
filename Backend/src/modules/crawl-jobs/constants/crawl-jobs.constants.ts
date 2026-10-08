@@ -19,6 +19,9 @@ export type JobTrigger = (typeof JOB_TRIGGERS)[number];
 
 export const ACTIVE_JOB_STATUSES: JobStatus[] = ['queued', 'running'];
 
+/** How long a finished job is kept before MongoDB removes it. */
+export const JOB_RETENTION_DAYS = 90;
+
 export const PIPELINE_KEY_HEADER = 'x-pipeline-key';
 
 export const JOB_ERRORS = defineErrors({

@@ -74,6 +74,30 @@ live ones have `deletedAt: null` (or no field, for rows written before this exis
 - Password-reset tokens are throwaway and are still hard-deleted.
 - Code that reads a raw collection (`connection.collection(...)`) bypasses the plugin and
   must filter `deletedAt: null` itself.
+## Data model additions (admin-db-design)
+
+Existing collections gained these fields; see `admin-db-design.md` for the full design.
+
+| Collection | New fields |
+|---|---|
+| `tenants` | `contact`, `limits` (copied from the plan, then adjustable per customer and the value that is enforced), `settings` (`retentionDays` 30-365, `defaultLlmModel`, `dataRegion`), `supportAccessUntil`, `createdBy` |
+| `users` | `emailVerifiedAt`, `mfa`, `failedLogins`, `lockedUntil`, `passwordChangedAt` |
+| `roles` | `key`, `scope` (`platform` or `company`), `tenant` (null for built-ins). `Admin` is `super_admin`, `User` is `owner` |
+| `permissions` | `scope`, `group` |
+| `sites` | `publicToken`, `secretKeyHash` (the `sk_...` secret is returned once, on create), `allowedOrigins`, `settings` (widget theme, copy, launcher, features, bot, rag, limits), `settingsVersion` |
+| `crawljobs` | `heartbeatAt`, `expireAt` (TTL: a finished job is removed 90 days after it ends) |
+| `passwordresettokens` | `purpose`, `usedAt` |
+
+**Existing data** is upgraded on boot by `database/existing-data-backfill.service.ts`. It
+touches only documents that lack a new field (soft-deleted ones included), so repeat runs
+change nothing. Sites created before this change get a token and origin but **no secret
+hash**; the secret can't be recovered, so it needs rotating once that endpoint exists.
+Old finished jobs are kept at least 30 days after the upgrade before TTL removes them.
+
+**Behaviour that changed:** five wrong passwords lock an account for 15 minutes, and a
+password reset or change ends every session issued before it (the person changing it is
+re-issued a fresh cookie).
+
 ## Pipeline API
 
 Your crawler talks to the panel with a shared secret in the

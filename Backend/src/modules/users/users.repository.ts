@@ -40,14 +40,59 @@ export class UsersRepository extends BaseRepository<User> {
     ]);
   }
 
-  setPassword(id: string | Types.ObjectId, passwordHash: string) {
-    return this.model.updateOne({ _id: id }, { $set: { passwordHash } });
+  /**
+   * Also ends every older session (`passwordChangedAt`), lifts any lockout, and
+   * verifies the email: reaching this point means the person held a valid
+   * emailed link or their current password.
+   */
+  async setPassword(id: string | Types.ObjectId, passwordHash: string) {
+    const now = new Date();
+    await this.model.updateOne(
+      { _id: id },
+      {
+        $set: {
+          passwordHash,
+          passwordChangedAt: now,
+          failedLogins: 0,
+          lockedUntil: null,
+        },
+      },
+    );
+    await this.model.updateOne(
+      { _id: id, emailVerifiedAt: null },
+      { $set: { emailVerifiedAt: now } },
+    );
   }
 
+  /** Successful sign-in: stamp it and clear the failure counters. */
   touchLastLogin(id: string | Types.ObjectId) {
     return this.model.updateOne(
       { _id: id },
-      { $set: { lastLoginAt: new Date() } },
+      { $set: { lastLoginAt: new Date(), failedLogins: 0, lockedUntil: null } },
     );
+  }
+
+  /** Counts a failed sign-in and locks the account for `lockMinutes` once `maxAttempts` is reached. */
+  async recordFailedLogin(
+    id: string | Types.ObjectId,
+    maxAttempts: number,
+    lockMinutes: number,
+  ): Promise<void> {
+    const user = await this.model.findByIdAndUpdate(
+      id,
+      { $inc: { failedLogins: 1 } },
+      { returnDocument: 'after' },
+    );
+    if (user && user.failedLogins >= maxAttempts) {
+      await this.model.updateOne(
+        { _id: id },
+        {
+          $set: {
+            lockedUntil: new Date(Date.now() + lockMinutes * 60_000),
+            failedLogins: 0,
+          },
+        },
+      );
+    }
   }
 }

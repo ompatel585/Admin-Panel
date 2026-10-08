@@ -4,6 +4,10 @@ import { defineErrors } from '../../../common/exceptions/app.exception.js';
 export const AUTH_COOKIE_NAME = 'access_token';
 export const IS_PUBLIC_KEY = 'is_public';
 
+/** Brute-force protection: this many wrong passwords in a row lock the account. */
+export const MAX_FAILED_LOGINS = 5;
+export const LOCKOUT_MINUTES = 15;
+
 export const AUTH_ERRORS = defineErrors({
   INVALID_CREDENTIALS: {
     code: 'AUTH_INVALID_CREDENTIALS',
@@ -14,6 +18,11 @@ export const AUTH_ERRORS = defineErrors({
     code: 'AUTH_ACCOUNT_DISABLED',
     message: 'This account has been deactivated',
     status: HttpStatus.FORBIDDEN,
+  },
+  ACCOUNT_LOCKED: {
+    code: 'AUTH_ACCOUNT_LOCKED',
+    message: 'Too many failed sign-in attempts. Try again later',
+    status: HttpStatus.TOO_MANY_REQUESTS,
   },
   EMAIL_TAKEN: {
     code: 'AUTH_EMAIL_TAKEN',

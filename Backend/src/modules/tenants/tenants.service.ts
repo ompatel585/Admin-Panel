@@ -29,11 +29,20 @@ export class TenantsService {
   constructor(private readonly repository: TenantsRepository) {}
 
   /** Also used by sign-up to give every new customer their own workspace. */
-  async create(dto: CreateTenantDto): Promise<TenantDocument> {
+  async create(
+    dto: CreateTenantDto,
+    extra: { createdBy?: string; contact?: Partial<Tenant['contact']> } = {},
+  ): Promise<TenantDocument> {
+    const plan = dto.plan ?? 'free';
     return this.repository.create({
       name: dto.name,
       slug: await this.uniqueSlug(dto.name),
-      plan: dto.plan ?? 'free',
+      plan,
+      limits: { ...PLAN_LIMITS[plan] },
+      ...(extra.contact && { contact: extra.contact as Tenant['contact'] }),
+      ...(extra.createdBy && {
+        createdBy: extra.createdBy as unknown as Tenant['createdBy'],
+      }),
     });
   }
 
@@ -90,7 +99,11 @@ export class TenantsService {
       throw new AppException(TENANT_ERRORS.PLAN_FORBIDDEN);
     }
 
-    const updated = await this.repository.updateById(id, { $set: dto });
+    // Stored limits are what is enforced, so a new plan brings its own limits.
+    const planChanged = dto.plan && dto.plan !== existing.plan;
+    const changes = Object.assign<Record<string, unknown>, UpdateTenantDto>({}, dto);
+    if (planChanged) changes.limits = { ...PLAN_LIMITS[dto.plan!] };
+    const updated = await this.repository.updateById(id, { $set: changes });
     if (!updated) throw new AppException(TENANT_ERRORS.NOT_FOUND);
     return this.toView(updated);
   }
@@ -117,8 +130,9 @@ export class TenantsService {
   }
 
   private toView(tenant: TenantDocument, usage?: TenantUsage) {
+    // Tenants not yet backfilled have no stored limits; the plan's apply meanwhile.
     return Object.assign(tenant.toJSON(), {
-      limits: PLAN_LIMITS[tenant.plan],
+      limits: tenant.limits ?? PLAN_LIMITS[tenant.plan],
       usage,
     });
   }

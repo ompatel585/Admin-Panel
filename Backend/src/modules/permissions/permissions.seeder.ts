@@ -42,6 +42,8 @@ export class PermissionsSeeder implements OnApplicationBootstrap {
         key: entry.key,
         name: entry.name,
         description: entry.description,
+        scope: entry.scope ?? 'company',
+        group: entry.key,
         parent: null,
         isSystem: true,
       });
@@ -54,6 +56,8 @@ export class PermissionsSeeder implements OnApplicationBootstrap {
         key: child.key,
         name: child.name,
         description: child.description,
+        scope: child.scope ?? entry.scope ?? 'company',
+        group: entry.key,
         parent: parent._id,
         isSystem: true,
       });

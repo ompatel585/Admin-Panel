@@ -43,7 +43,12 @@ export class RolesSeeder implements OnApplicationBootstrap {
   }
 
   private async seedRole(seed: RoleSeed): Promise<void> {
-    if (await this.repository.findByName(seed.name)) return;
+    if (
+      (await this.repository.findByName(seed.name)) ||
+      (await this.repository.findByKey(seed.key))
+    ) {
+      return;
+    }
 
     const permissions = await this.permissionsRepository
       .find({ key: { $in: seed.permissions } })
@@ -52,6 +57,8 @@ export class RolesSeeder implements OnApplicationBootstrap {
 
     await this.repository.create({
       name: seed.name,
+      key: seed.key,
+      scope: seed.scope,
       description: seed.description,
       isAdmin: seed.isAdmin,
       isHidden: seed.isHidden,

@@ -4,6 +4,7 @@ import {
   KeyRound,
   LayoutDashboard,
   ListChecks,
+  Palette,
   Settings,
   ShieldCheck,
   Users,
@@ -36,6 +37,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Knowledge base",
     items: [
       { label: "Websites", href: ROUTES.sites, icon: Globe, permission: PERMISSIONS.sites.read },
+      { label: "Widget", href: ROUTES.widget, icon: Palette, permission: PERMISSIONS.sites.update },
       { label: "Crawl jobs", href: ROUTES.crawlJobs, icon: ListChecks, permission: PERMISSIONS.crawlJobs.read },
     ],
   },

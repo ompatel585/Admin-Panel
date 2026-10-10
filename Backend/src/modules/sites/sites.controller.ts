@@ -21,6 +21,7 @@ import { SITE_MESSAGES } from './constants/sites.constants.js';
 import { CreateSiteDto } from './dto/create-site.dto.js';
 import { ListSitesQueryDto } from './dto/list-sites-query.dto.js';
 import { UpdateSiteDto } from './dto/update-site.dto.js';
+import { UpdateWidgetDto } from './dto/update-widget.dto.js';
 import { SitesService } from './sites.service.js';
 
 const { READ, CREATE, UPDATE, DELETE, CRAWL } = PERMISSION_KEYS.SITES;
@@ -76,6 +77,18 @@ export class SitesController {
     @Body() dto: UpdateSiteDto,
   ) {
     return this.sitesService.update(user, id, dto);
+  }
+
+  /** Widget appearance and texts; guarded by the same permission as editing a website. */
+  @Patch(':id/widget')
+  @RequirePermissions(UPDATE)
+  @ResponseMessage(SITE_MESSAGES.WIDGET_UPDATED)
+  updateWidget(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() dto: UpdateWidgetDto,
+  ) {
+    return this.sitesService.updateWidget(user, id, dto);
   }
 
   @Post(':id/crawl')

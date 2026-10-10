@@ -6,6 +6,7 @@ export const ROUTES = {
   resetPassword: "/reset-password",
   dashboard: "/dashboard",
   sites: "/sites",
+  widget: "/widget",
   crawlJobs: "/crawl-jobs",
   tenants: "/tenants",
   settings: "/settings",

@@ -23,6 +23,7 @@ import {
 import type { CrawlSettingsDto, CreateSiteDto } from './dto/create-site.dto.js';
 import type { ListSitesQueryDto } from './dto/list-sites-query.dto.js';
 import type { UpdateSiteDto } from './dto/update-site.dto.js';
+import type { UpdateWidgetDto } from './dto/update-widget.dto.js';
 import type { Site, SiteDocument } from './schemas/site.schema.js';
 import { SitesRepository } from './sites.repository.js';
 
@@ -162,6 +163,31 @@ export class SitesService {
     const updated = await this.repository.updateById(
       id,
       { $set: changes },
+      POPULATE,
+    );
+    if (!updated) throw new AppException(SITE_ERRORS.NOT_FOUND);
+    return updated;
+  }
+
+  /**
+   * Saves the widget's look and texts. Only the fields sent are written, and
+   * `settingsVersion` goes up so embedded widgets drop their cached copy.
+   */
+  async updateWidget(user: AuthUser, id: string, dto: UpdateWidgetDto) {
+    await this.getAccessible(user, id);
+
+    const set: Record<string, unknown> = {};
+    for (const group of ['theme', 'copy', 'launcher', 'features'] as const) {
+      for (const [key, value] of Object.entries(dto[group] ?? {})) {
+        if (value !== undefined) set[`settings.${group}.${key}`] = value;
+      }
+    }
+
+    const updated = await this.repository.updateById(
+      id,
+      Object.keys(set).length > 0
+        ? { $set: set, $inc: { settingsVersion: 1 } }
+        : {},
       POPULATE,
     );
     if (!updated) throw new AppException(SITE_ERRORS.NOT_FOUND);

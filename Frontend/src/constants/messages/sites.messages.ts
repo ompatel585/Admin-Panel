@@ -11,6 +11,7 @@ export const sitesMessages = defineMessages({
   success: {
     createSite: "Website added. Crawling will start shortly.",
     updateSite: "Website updated.",
+    updateSiteWidget: "Widget settings saved.",
     crawlSite: "Crawl queued.",
     deleteSite: "Website deleted.",
   },

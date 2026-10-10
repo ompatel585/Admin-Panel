@@ -1,5 +1,12 @@
 import type { ApiResponse, Paginated } from "@/types/api";
-import type { CreateSiteRequest, Site, SiteListParams, SiteOption, UpdateSiteRequest } from "@/types/site";
+import type {
+  CreateSiteRequest,
+  Site,
+  SiteListParams,
+  SiteOption,
+  UpdateSiteRequest,
+  UpdateWidgetRequest,
+} from "@/types/site";
 import { baseApi, unwrapData } from "./baseApi";
 
 export const sitesApi = baseApi.injectEndpoints({
@@ -28,6 +35,12 @@ export const sitesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Site", "SiteOption"],
     }),
 
+    updateSiteWidget: build.mutation<Site, { id: string } & UpdateWidgetRequest>({
+      query: ({ id, ...body }) => ({ url: `/sites/${id}/widget`, method: "PATCH", body }),
+      transformResponse: (r: ApiResponse<Site>) => unwrapData(r),
+      invalidatesTags: ["Site"],
+    }),
+
     crawlSite: build.mutation<Site, string>({
       query: (id) => ({ url: `/sites/${id}/crawl`, method: "POST" }),
       transformResponse: (r: ApiResponse<Site>) => unwrapData(r),
@@ -46,6 +59,7 @@ export const {
   useGetSiteOptionsQuery,
   useCreateSiteMutation,
   useUpdateSiteMutation,
+  useUpdateSiteWidgetMutation,
   useCrawlSiteMutation,
   useDeleteSiteMutation,
 } = sitesApi;

@@ -93,4 +93,5 @@ export const SITE_MESSAGES = {
   UPDATED: 'Website updated',
   DELETED: 'Website deleted',
   CRAWL_QUEUED: 'Crawl queued',
+  WIDGET_UPDATED: 'Widget settings saved',
 } as const;

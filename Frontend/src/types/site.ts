@@ -12,6 +12,49 @@ export interface CrawlSettings {
   recrawl: RecrawlSchedule;
 }
 
+export interface WidgetTheme {
+  accent: string;
+  accentForeground: string;
+  surface: string;
+  raised: string;
+  foreground: string;
+  muted: string;
+  border: string;
+  radius: number;
+  font: string;
+}
+
+export interface WidgetCopy {
+  title: string;
+  subtitle: string;
+  greeting: string;
+  placeholder: string;
+  offlineMessage: string;
+  avatarText: string;
+}
+
+export type LauncherPosition = "bottom-right" | "bottom-left";
+
+export interface WidgetLauncher {
+  position: LauncherPosition;
+  offset: number;
+  width: number;
+  height: number;
+}
+
+export interface WidgetFeatures {
+  streaming: boolean;
+  showSources: boolean;
+}
+
+/** What the admin can restyle; the bot and RAG settings are not part of this panel. */
+export interface WidgetSettings {
+  theme: WidgetTheme;
+  copy: WidgetCopy;
+  launcher: WidgetLauncher;
+  features: WidgetFeatures;
+}
+
 export interface Site {
   id: string;
   tenant: { id: string; name: string; slug: string };
@@ -23,6 +66,8 @@ export interface Site {
   stats: { pages: number; chunks: number; lastCrawledAt: string | null; lastError: string | null };
   /** The queued or running crawl, if any. */
   activeJob: { id: string; status: string; stage: string | null; progress: number } | null;
+  settings: WidgetSettings;
+  settingsVersion: number;
   createdAt: string;
 }
 
@@ -43,6 +88,13 @@ export interface CreateSiteRequest {
 export interface UpdateSiteRequest {
   name?: string;
   crawl?: Partial<CrawlSettings>;
+}
+
+export interface UpdateWidgetRequest {
+  theme?: Partial<WidgetTheme>;
+  copy?: Partial<WidgetCopy>;
+  launcher?: Partial<WidgetLauncher>;
+  features?: Partial<WidgetFeatures>;
 }
 
 export interface SiteListParams extends ListParams {
